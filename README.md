@@ -5,9 +5,11 @@
 **A feature-complete external cheat for Counter-Strike 2.**
 
 <p>
-  <a href="https://github.com/hollyntt/vesta/releases/latest"><img src=".github/assets/icon-download.svg" width="16" height="16" alt=""> <strong>Download</strong></a>
+  <a href="https://github.com/hollyntt/vesta/releases/latest"><img src=".github/assets/icon-download.svg" width="16" height="16" alt=""> <strong>Forked Download</strong></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://hollyntt.github.io/vesta/"><img src=".github/assets/icon-website.svg" width="16" height="16" alt=""> <strong>Website</strong></a>
+  <a href="https://github.com/Read1dno/vesta/releases/latest"><img src=".github/assets/icon-download.svg" width="16" height="16" alt=""> <strong>Main Download</strong></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://Read1dno.github.io/vesta/"><img src=".github/assets/icon-website.svg" width="16" height="16" alt=""> <strong>Website</strong></a>
   &nbsp;&nbsp;&nbsp;
   <a href="lua/docs/en/README.md"><img src=".github/assets/icon-docs.svg" width="16" height="16" alt=""> <strong>Lua API</strong></a>
 </p>
