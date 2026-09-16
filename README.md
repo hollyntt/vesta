@@ -5,9 +5,9 @@
 **A feature-complete external cheat for Counter-Strike 2.**
 
 <p>
-  <a href="https://github.com/Read1dno/vesta/releases/latest"><img src=".github/assets/icon-download.svg" width="16" height="16" alt=""> <strong>Download</strong></a>
+  <a href="https://github.com/hollyntt/vesta/releases/latest"><img src=".github/assets/icon-download.svg" width="16" height="16" alt=""> <strong>Download</strong></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://read1dno.github.io/vesta/"><img src=".github/assets/icon-website.svg" width="16" height="16" alt=""> <strong>Website</strong></a>
+  <a href="https://hollyntt.github.io/vesta/"><img src=".github/assets/icon-website.svg" width="16" height="16" alt=""> <strong>Website</strong></a>
   &nbsp;&nbsp;&nbsp;
   <a href="lua/docs/en/README.md"><img src=".github/assets/icon-docs.svg" width="16" height="16" alt=""> <strong>Lua API</strong></a>
 </p>
@@ -20,7 +20,7 @@ sandboxed Lua API. The native client stays external: no injection and no driver.
 
 ## Quick start
 
-1. Download [`vesta.exe`](https://github.com/Read1dno/vesta/releases/latest).
+1. Download [`vesta.exe`](https://github.com/hollyntt/vesta/releases/latest).
 2. Start Counter-Strike 2.
 3. Run `vesta.exe`.
 4. Press `Insert` to open the menu. Press `End` to close Vesta.
@@ -163,7 +163,7 @@ published with signed build provenance. Verify a downloaded executable with
 [GitHub CLI](https://cli.github.com/):
 
 ```powershell
-gh attestation verify .\vesta.exe --repo Read1dno/vesta
+gh attestation verify .\vesta.exe --repo hollyntt/vesta
 ```
 
 <details>
@@ -185,8 +185,8 @@ pinned third-party dependencies during the first configure.
 
 ## Help and development
 
-- Found a reproducible problem? [Report a bug](https://github.com/Read1dno/vesta/issues/new?template=bug-report.yml).
-- Have a focused idea? [Request a feature](https://github.com/Read1dno/vesta/issues/new?template=feature-request.yml).
+- Found a reproducible problem? [Report a bug](https://github.com/hollyntt/vesta/issues/new?template=bug-report.yml).
+- Have a focused idea? [Request a feature](https://github.com/hollyntt/vesta/issues/new?template=feature-request.yml).
 - Want to submit a change? Read [Contributing](.github/CONTRIBUTING.md).
 - Community discussion lives in the [UnknownCheats thread](https://www.unknowncheats.me/forum/counter-strike-2-a/764247-vesta-external.html).
 
@@ -203,6 +203,6 @@ terms of the software you use it with.
 
 <div align="center">
 
-[Website](https://read1dno.github.io/vesta/) · [UnknownCheats](https://www.unknowncheats.me/forum/counter-strike-2-a/764247-vesta-external.html) · [Telegram](https://t.me/readidno)
+[Website](https://hollyntt.github.io/vesta/) · [UnknownCheats](https://www.unknowncheats.me/forum/counter-strike-2-a/764247-vesta-external.html) · [Telegram](https://t.me/readidno)
 
 </div>
