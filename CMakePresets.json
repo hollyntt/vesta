@@ -10,8 +10,7 @@
       "name": "msvc-base",
       "hidden": true,
       "generator": "Visual Studio 17 2022",
-      "architecture": "x64",
-      "cacheVariables": { "CMAKE_POLICY_VERSION_MINIMUM": "3.5" }
+      "architecture": "x64"
     },
     {
       "name": "debug",

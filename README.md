@@ -5,11 +5,9 @@
 **A feature-complete external cheat for Counter-Strike 2.**
 
 <p>
-  <a href="https://github.com/hollyntt/vesta/releases/latest"><img src=".github/assets/icon-download.svg" width="16" height="16" alt=""> <strong>Forked Download</strong></a>
+  <a href="https://github.com/Read1dno/vesta/releases/latest"><img src=".github/assets/icon-download.svg" width="16" height="16" alt=""> <strong>Download</strong></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/Read1dno/vesta/releases/latest"><img src=".github/assets/icon-download.svg" width="16" height="16" alt=""> <strong>Main Download</strong></a>
-  &nbsp;&nbsp;&nbsp;
-  <a href="https://Read1dno.github.io/vesta/"><img src=".github/assets/icon-website.svg" width="16" height="16" alt=""> <strong>Website</strong></a>
+  <a href="https://read1dno.github.io/vesta/"><img src=".github/assets/icon-website.svg" width="16" height="16" alt=""> <strong>Website</strong></a>
   &nbsp;&nbsp;&nbsp;
   <a href="lua/docs/en/README.md"><img src=".github/assets/icon-docs.svg" width="16" height="16" alt=""> <strong>Lua API</strong></a>
 </p>
@@ -22,7 +20,7 @@ sandboxed Lua API. The native client stays external: no injection and no driver.
 
 ## Quick start
 
-1. Download [`vesta.exe`](https://github.com/hollyntt/vesta/releases/latest).
+1. Download [`vesta.exe`](https://github.com/Read1dno/vesta/releases/latest).
 2. Start Counter-Strike 2.
 3. Run `vesta.exe`.
 4. Press `Insert` to open the menu. Press `End` to close Vesta.
@@ -43,12 +41,19 @@ restart Vesta.
 > render mode and set model, texture, shader, and particle detail to Low in CS2.
 
 > [!WARNING]
-> **VAC / VAC Live — observed on 21 August 2026.** There are no confirmed reports
-> of Vesta causing a permanent client-side VAC ban. For Premier, use `fps_max 86`,
-> keep Aimbot disabled, and avoid repeated impossible multi-kill rounds. Seed
-> Trigger jump and no-scope shots were usable in current testing, but anti-cheat
-> behavior can change and this is not a permanent guarantee.
+> **VACnet / VAC Live — 24 September 2026.** Current reports indicate that
+> Aimbot, RCS and Triggerbot use can be detected and can cause a cooldown.
+> No FPS setting, play style or feature configuration guarantees protection.
+> The reliable way to avoid a cheat-related cooldown is not to play with cheats.
+> Vesta does not promise immunity from cooldowns or bans.
 
+## v1.1.7 — 24 September 2026
+
+- Updated Auto Accept for the current Panorama panel layout. It was confirmed
+  working in-game after the geometry fix.
+- Refreshed the public source and build files for the current game update.
+- Updated the detection notice above; no FPS setting or play style is presented
+  as protection from VACnet / VAC Live.
 ## Features
 
 Open a section only when you need its settings.
@@ -165,7 +170,7 @@ published with signed build provenance. Verify a downloaded executable with
 [GitHub CLI](https://cli.github.com/):
 
 ```powershell
-gh attestation verify .\vesta.exe --repo hollyntt/vesta
+gh attestation verify .\vesta.exe --repo Read1dno/vesta
 ```
 
 <details>
@@ -180,15 +185,14 @@ cmake --build --preset release --parallel
 ctest --test-dir build/release -C Release --output-on-failure
 ```
 
-The executable is written to `build/release/bin/vesta.exe`. CMake downloads the
-pinned third-party dependencies during the first configure.
+The executable is written to `build/bin/vesta.exe`. CMake downloads the pinned third-party dependencies during the first configure.
 
 </details>
 
 ## Help and development
 
-- Found a reproducible problem? [Report a bug](https://github.com/hollyntt/vesta/issues/new?template=bug-report.yml).
-- Have a focused idea? [Request a feature](https://github.com/hollyntt/vesta/issues/new?template=feature-request.yml).
+- Found a reproducible problem? [Report a bug](https://github.com/Read1dno/vesta/issues/new?template=bug-report.yml).
+- Have a focused idea? [Request a feature](https://github.com/Read1dno/vesta/issues/new?template=feature-request.yml).
 - Want to submit a change? Read [Contributing](.github/CONTRIBUTING.md).
 - Community discussion lives in the [UnknownCheats thread](https://www.unknowncheats.me/forum/counter-strike-2-a/764247-vesta-external.html).
 
@@ -205,6 +209,6 @@ terms of the software you use it with.
 
 <div align="center">
 
-[Website](https://hollyntt.github.io/vesta/) · [UnknownCheats](https://www.unknowncheats.me/forum/counter-strike-2-a/764247-vesta-external.html) · [Telegram](https://t.me/readidno)
+[Website](https://read1dno.github.io/vesta/) · [UnknownCheats](https://www.unknowncheats.me/forum/counter-strike-2-a/764247-vesta-external.html) · [Telegram](https://t.me/readidno)
 
 </div>
