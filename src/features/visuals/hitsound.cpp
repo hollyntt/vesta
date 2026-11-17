@@ -3,6 +3,7 @@
 #include <resources/sounds/hitsounds.hpp>
 
 #include <xaudio2.h>
+#include <objbase.h>
 #include <condition_variable>
 #include <deque>
 
@@ -147,6 +148,8 @@ struct hitsound_player::implementation
 
     void run()
     {
+        // XAudio2 requires COM on this thread.
+        CoInitializeEx(nullptr, COINIT_MULTITHREADED);
         for (;;)
         {
             request next{};
@@ -160,6 +163,7 @@ struct hitsound_player::implementation
             }
             play_now(next.style, next.volume);
         }
+        CoUninitialize();
     }
 
     bool initialize()

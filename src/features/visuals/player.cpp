@@ -191,26 +191,28 @@ void player_t::render(render::draw::draw_list& draw_list, const std::shared_ptr<
         bomb_info.baked_site = sampled.baked_site;
     }
 
-    for (const auto& pose : frame->players)
+    // Threat hitboxes are independent of legit visibility: an occluded threat is still a threat.
+    const auto threat_enabled = cfg.m_threat_module.enabled;
+    if (threat_enabled)
     {
-        if (pose.source_index >= frame->world->size())
-            continue;
-        const auto& player = (*frame->world)[pose.source_index];
-        if (!game::local_player().is_enemy(player.team))
+        for (const auto& pose : frame->players)
         {
-            continue;
-        }
-        if (!player.legit_visible)
-            continue;
+            if (pose.source_index >= frame->world->size())
+                continue;
+            const auto& player = (*frame->world)[pose.source_index];
+            if (!game::local_player().is_enemy(player.team))
+            {
+                continue;
+            }
+            if (!pose.bones.is_valid())
+            {
+                continue;
+            }
 
-        if (!pose.bones.is_valid())
-        {
-            continue;
+            const auto opacity = player.invulnerable ? 0.45f : 1.0f;
+            render::draw::draw_list player_draw{draw_list.m_im_draw_list, opacity};
+            paint_threat_highlights(player_draw, pose.bones, player, current_time);
         }
-
-        const auto opacity = player.legit_opacity * (player.invulnerable ? 0.45f : 1.0f);
-        render::draw::draw_list player_draw{draw_list.m_im_draw_list, opacity};
-        paint_threat_highlights(player_draw, pose.bones, player, current_time);
     }
 
     for (const auto& pose : frame->players)
