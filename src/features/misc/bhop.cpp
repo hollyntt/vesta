@@ -61,12 +61,6 @@ void bhop_t::tick()
     const auto& edge_cfg = snapshot->general.m_edge_jump;
     if (!bunny_cfg.enabled && !edge_cfg.enabled)
     {
-        if (m_strafe_key)
-        {
-            platform::windows::bound_input().key(m_strafe_key, false);
-            m_strafe_key = 0;
-        }
-        m_cursor_sampled = false;
         if (m_gate_requested)
         {
             const auto jump_key = m_jump_key;
@@ -142,53 +136,6 @@ void bhop_t::tick()
 
     const auto bunny_active = gate_requested && platform::windows::bound_input().key_gate_ready() &&
                               (activation_is_jump ? platform::windows::bound_input().key_gate_held() : activation_held);
-    const auto update_strafe = [&](const int dx)
-    {
-        if (!dx)
-            return;
-        const auto left = game::input_bindings().resolve(game::input_action::left);
-        const auto right = game::input_bindings().resolve(game::input_action::right);
-        const auto desired = dx < 0 ? right : left;
-        const auto desired_key = desired.device == game::input_device::keyboard ? desired.virtual_key : 0;
-        if (desired_key == m_strafe_key)
-            return;
-        if (m_strafe_key)
-            platform::windows::bound_input().key(m_strafe_key, false);
-        if (desired_key)
-            platform::windows::bound_input().key(desired_key, true);
-        m_strafe_key = desired_key;
-    };
-    if (!bunny_active)
-    {
-        if (m_strafe_key)
-        {
-            platform::windows::bound_input().key(m_strafe_key, false);
-            m_strafe_key = 0;
-        }
-        m_cursor_sampled = false;
-    }
-    else
-    {
-        const auto cursor_delta = platform::windows::bound_input().consume_mouse_delta_x();
-        POINT cursor{};
-        if (!cursor_delta && ::GetCursorPos(&cursor))
-        {
-            if (!m_cursor_sampled)
-            {
-                m_last_cursor = cursor;
-                m_cursor_sampled = true;
-            }
-            else
-            {
-                platform::windows::bound_input().observe_mouse_delta_x(cursor.x - m_last_cursor.x);
-                m_last_cursor = cursor;
-            }
-        }
-        const auto dx = cursor_delta;
-        update_strafe(cursor_delta);
-    }
-    if (bunny_active)
-        update_strafe(platform::windows::bound_input().consume_mouse_delta_x());
     const auto edge_active =
         game_active && !menu_open && !text_entry_active && player_ready && edge_cfg.enabled && jump_key != 0 &&
         input_lifecycle::activation_held(edge_cfg.activation_key, [](const std::uint16_t key)

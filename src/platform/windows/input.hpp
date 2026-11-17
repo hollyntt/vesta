@@ -115,14 +115,6 @@ public:
     {
         return m_foreign_pointer_ticks.load(std::memory_order_acquire);
     }
-    [[nodiscard]] int consume_mouse_delta_x() const noexcept
-    {
-        return m_mouse_delta_x.exchange(0, std::memory_order_acq_rel);
-    }
-    void observe_mouse_delta_x(int delta) const noexcept
-    {
-        m_mouse_delta_x.fetch_add(delta, std::memory_order_relaxed);
-    }
     bool key(std::uint16_t virtual_key, bool pressed) const noexcept;
     bool keys(std::span<const key_transition> transitions) const noexcept;
 
@@ -192,7 +184,6 @@ private:
     inject_key_fn m_key_injector{};
     mutable std::atomic<std::uint32_t> m_injected_pointer_down{};
     mutable std::atomic<std::int64_t> m_foreign_pointer_ticks{};
-    mutable std::atomic<int> m_mouse_delta_x{};
     static inline thread_local bool s_walker_pointer{};
     std::jthread m_gate_thread{};
     std::atomic<DWORD> m_gate_thread_id{};

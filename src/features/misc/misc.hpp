@@ -215,9 +215,6 @@ private:
     float m_last_bunny_simulation_time{-1.0f};
     std::uintptr_t m_bunny_pawn{};
     std::chrono::steady_clock::time_point m_last_bunny_tap{};
-    std::uint16_t m_strafe_key{};
-    POINT m_last_cursor{};
-    bool m_cursor_sampled{};
     // Every transition is held long enough to cross a game input sample. If a
     // held edge-jump press survives long enough for the game to sample it.
     std::chrono::steady_clock::time_point m_last_transition{};
