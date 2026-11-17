@@ -777,8 +777,11 @@ panels::~panels() = default;
 
 void panels::draw_movement_info(const bool interactive)
 {
-    auto& cfg = config::general_settings.m_movement_info;
-    if (!cfg.enabled)
+    auto& settings = config::general_settings;
+    auto& cfg = settings.m_movement_info;
+    // Movement telemetry is configured from the Bunny Hop popup, so the popup's
+    // master switch also controls whether this panel is shown.
+    if (!cfg.enabled && !settings.m_bunny_hop.enabled)
         return;
 
     const auto pawn = game::local_player().pawn();

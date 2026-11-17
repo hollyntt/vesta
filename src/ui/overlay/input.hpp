@@ -48,6 +48,8 @@ private:
     std::array<std::atomic<bool>, 5> m_mouse_buttons{};
     std::array<std::atomic<bool>, 5> m_mouse_pressed{};
     std::array<bool, 5> m_reported_mouse_buttons{};
+    POINT m_last_mouse_position{};
+    bool m_mouse_position_sampled{};
     std::atomic<LONG> m_wheel{};
     std::atomic<LONG> m_wheel_horizontal{};
     HHOOK m_keyboard_hook{};

@@ -50,6 +50,10 @@
 #include <shobjidl.h>
 #include <ui/menu/menu.hpp>
 
+#ifndef WDA_EXCLUDEFROMCAPTURE
+#define WDA_EXCLUDEFROMCAPTURE 0x11
+#endif
+
 namespace ui
 {
 namespace

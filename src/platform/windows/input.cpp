@@ -181,9 +181,14 @@ bool input_gateway::pointer(int dx, int dy, pointer_action actions) const noexce
     }
     if (injected)
     {
-        if (contains(actions, pointer_action::relative_move) && (dx || dy) && !s_walker_pointer)
-            m_foreign_pointer_ticks.store(std::chrono::steady_clock::now().time_since_epoch().count(),
-                                          std::memory_order_release);
+        if (contains(actions, pointer_action::relative_move) && (dx || dy))
+        {
+            if (!s_walker_pointer)
+                m_foreign_pointer_ticks.store(std::chrono::steady_clock::now().time_since_epoch().count(),
+                                             std::memory_order_release);
+            if (dx)
+                m_mouse_delta_x.fetch_add(dx, std::memory_order_relaxed);
+        }
         if ((static_cast<std::uint32_t>(actions) & pointer_button_action_mask) != 0)
         {
             auto previous = m_injected_pointer_down.load(std::memory_order_relaxed);

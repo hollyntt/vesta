@@ -2,6 +2,7 @@
 
 #include <ui/overlay/input.hpp>
 #include <config/hotkeys.hpp>
+#include <platform/windows/input.hpp>
 
 #include "imgui.h"
 
@@ -325,6 +326,14 @@ LRESULT CALLBACK input_router::mouse_proc(const int code, const WPARAM message, 
     const bool capture = router->m_capture.load(std::memory_order_relaxed) &&
                          router->m_capture_foreground.load(std::memory_order_relaxed) == active_root_window();
     const bool injected = (event.flags & LLMHF_INJECTED) != 0;
+    if (!injected && message == WM_MOUSEMOVE)
+    {
+        if (router->m_mouse_position_sampled)
+            platform::windows::bound_input().observe_mouse_delta_x(
+                static_cast<int>(event.pt.x - router->m_last_mouse_position.x));
+        router->m_last_mouse_position = event.pt;
+        router->m_mouse_position_sampled = true;
+    }
     if (capture && !injected)
     {
         switch (message)

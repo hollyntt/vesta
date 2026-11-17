@@ -276,8 +276,14 @@ void draw_movement_tab()
     card("movement", "MOVEMENT", 2,
          [&]
          {
-             toggle_popup_row("Enable Bunny Hop", p.m_bunny_hop.enabled, 1,
-                              [&] { keybind_row("Activation Key", p.m_bunny_hop.activation_key); });
+             toggle_popup_row("Enable Bunny Hop", p.m_bunny_hop.enabled, 4,
+                              [&]
+                              {
+                                  keybind_row("Activation Key", p.m_bunny_hop.activation_key);
+                                  toggle_row("Show Speed Overlay", p.m_movement_info.show_speed);
+                                  toggle_row("Show Ground State", p.m_movement_info.show_ground);
+                                  toggle_row("Show Velocity", p.m_movement_info.show_velocity);
+                              });
              toggle_popup_row("Enable Edge Jump", p.m_edge_jump.enabled, 1,
                               [&] { keybind_row("Activation Key", p.m_edge_jump.activation_key); });
          });
