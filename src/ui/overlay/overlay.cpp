@@ -32,6 +32,7 @@
 #include <ui/overlay/overlay.hpp>
 #include <ui/overlay/imgui_frame.hpp>
 #include <render/text/esp_text.hpp>
+#include <cstring>
 #include <resources/fonts/notosans_medium.hpp>
 #include <resources/fonts/weapons.hpp>
 #include <resources/images/ct.hpp>
@@ -484,11 +485,15 @@ void overlay_t::apply_pending_file_request()
         case file_request::choose_custom_hitsound:
         {
             auto& custom = config::general_settings.m_custom_hitsound;
+            if (path.size() >= custom.path.size())
+            {
+                game::bound_memory().log.warning("custom hitsound path is too long for the config buffer.");
+                break;
+            }
+            custom.path.fill('\0');
+            std::memcpy(custom.path.data(), path.data(), path.size());
             custom.enabled = true;
-            std::string s = std::string(chosen.u8string().begin(), chosen.u8string().end());
-            std::copy(s.begin(), s.end(), custom.path.begin());
-            if (!custom.path.empty())
-                custom.path[custom.path.size() - 1] = '\0';
+            config::publish_runtime_snapshot();
             break;
         }
     }
@@ -778,13 +783,13 @@ bool overlay_t::run()
 
         if (!pump_messages())
             break;
+        apply_pending_file_request();
         update_frame_state();
         if (!m_overlay_visible)
         {
             ::MsgWaitForMultipleObjectsEx(0, nullptr, idle_wait_ms, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
             continue;
         }
-        apply_pending_file_request();
         if (m_content_suppressed)
         {
             ::MsgWaitForMultipleObjectsEx(0, nullptr, idle_wait_ms, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
