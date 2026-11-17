@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
+# FreeType 2.13.2 predates CMake 4's removal of compatibility with policies before 3.5.
+# Set the minimum policy version for fetched dependencies rather than editing generated sources.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 project(vesta VERSION 1.2.3 LANGUAGES C CXX)
 
 # Lua (compiled as C) reports errors with longjmp through Vesta's C++ API functions. With /EHsc MSVC assumes that
