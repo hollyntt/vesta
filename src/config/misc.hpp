@@ -184,6 +184,15 @@ struct general_profile
         int activation_key{VK_SPACE};
     } m_bunny_hop{};
 
+    struct movement_info
+    {
+        bool enabled{false};
+        screen_layout layout{40.0f, 480.0f};
+        bool show_speed{true};
+        bool show_ground{true};
+        bool show_velocity{false};
+    } m_movement_info{};
+
     struct edge_jump
     {
         bool enabled{false};

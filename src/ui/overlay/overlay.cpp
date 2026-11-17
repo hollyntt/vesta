@@ -551,7 +551,7 @@ void overlay_t::draw_world(render::draw::draw_list& draw_list)
         game::camera().begin_presentation_frame(pose_frame->camera, m_render_width, m_render_height);
 
     // Performance zones are compile-time no-ops in production Release.
-    if (m_use_gpu && config::general_settings.use_gpu)
+    if (m_use_gpu && config::general_settings.use_gpu && m_effect_throttle_frames == 0)
     {
         VESTA_PERF_SCOPE(chams);
         features::chams::g_renderer.render_world_effects(m_rtv, m_render_width, m_render_height);
@@ -614,6 +614,7 @@ void overlay_t::build_frame()
             m_hud_panels.draw_event_log(interactive);
             m_hud_panels.draw_keybind_list(interactive);
             m_hud_panels.draw_bomb_info(interactive);
+            m_hud_panels.draw_movement_info(interactive);
         }
     }
 
@@ -636,7 +637,8 @@ void overlay_t::submit_frame()
         ImGui::Render();
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
     }
-    if (m_use_gpu && config::general_settings.use_gpu && !render::menu_open())
+    if (m_use_gpu && config::general_settings.use_gpu && !render::menu_open() &&
+        m_effect_throttle_frames == 0)
     {
         VESTA_PERF_SCOPE(bloom_2d);
         features::chams::g_renderer.render_2d_bloom(m_rtv, m_render_width, m_render_height);
@@ -797,6 +799,9 @@ bool overlay_t::run()
                 static_cast<void>(config::storage.write_cache());
             }
         }
+        const bool throttle_gpu_effects = m_effect_throttle_frames != 0;
+        if (throttle_gpu_effects)
+            --m_effect_throttle_frames;
         submit_frame();
         // Keep CPU/GPU command construction separate from message dispatch and
         // Present retry waits in the telemetry.
@@ -813,6 +818,9 @@ bool overlay_t::run()
                 continue;
         }
         const auto outcome = present_frame(present_recovery);
+        if (outcome == present_outcome::dropped)
+            m_effect_throttle_frames = std::min<std::uint32_t>(
+                std::max<std::uint32_t>(m_effect_throttle_frames, 2u) * 2u, 30u);
         if (outcome == present_outcome::failed)
         {
             completed = false;

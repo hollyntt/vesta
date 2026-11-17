@@ -192,6 +192,7 @@ private:
     // Timer pacing while the swap chain's latency signal is silent (see enter_latency_fallback); probed again later.
     bool m_frame_latency_unreliable{};
     bool m_nonwaitable_stall_reported{};
+    std::uint32_t m_effect_throttle_frames{};
     bool m_latency_fallback_reported{};
     static constexpr int k_latency_timeouts_for_fallback = 6; // consecutive 50 ms timeouts
     int m_latency_timeouts{};

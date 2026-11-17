@@ -5,6 +5,8 @@
 #include <render/presentation.hpp>
 #include <game/memory/bound_services.hpp>
 #include <game/state/services.hpp>
+#include <config/settings.hpp>
+#include <config/misc.hpp>
 #include <ui/presentation.hpp>
 #include <features/misc/auto_stop.hpp>
 #include <features/visuals/event_log.hpp>
@@ -416,6 +418,7 @@ struct hud_state
     panel_drag events;
     panel_drag keybinds;
     panel_drag bomb;
+    panel_drag movement;
     ui::notices::dismissals closed_notices;
     std::uint64_t loading_serial{};
     std::chrono::steady_clock::time_point loading_since{};
@@ -426,6 +429,9 @@ struct compact_panel_row
     std::string text{};
     ImU32 color{k_wm_text};
 };
+
+void draw_compact_panel(const char* title, const std::vector<compact_panel_row>& rows,
+                        config::general_profile::screen_layout& layout, panel_drag& drag, bool interactive);
 
 [[nodiscard]] ImVec2 resolve_screen_layout(const config::general_profile::screen_layout& layout,
                                            const ImVec2 panel_size, const ImVec2 display, const float dpi_scale,
@@ -768,6 +774,48 @@ panels::panels()
 }
 
 panels::~panels() = default;
+
+void panels::draw_movement_info(const bool interactive)
+{
+    auto& cfg = config::general_settings.m_movement_info;
+    if (!cfg.enabled)
+        return;
+
+    const auto pawn = game::local_player().pawn();
+    const bool alive = pawn && game::local_player().alive();
+    foundation::vec3 velocity{};
+    std::uint32_t flags{};
+    std::uint32_t ground_entity{};
+    bool valid{};
+    if (alive)
+    {
+        valid = game::bound_memory().process.copy(pawn + SCHEMA("C_BaseEntity", "m_vecAbsVelocity"_id),
+                                                   &velocity, sizeof(velocity));
+        valid = game::bound_memory().process.copy(pawn + SCHEMA("C_BaseEntity", "m_fFlags"_id), &flags,
+                                                   sizeof(flags)) && valid;
+        valid = game::bound_memory().process.copy(pawn + SCHEMA("C_BaseEntity", "m_hGroundEntity"_id),
+                                                   &ground_entity, sizeof(ground_entity)) && valid;
+    }
+    if (!valid && !interactive)
+        return;
+
+    const bool on_ground = (flags & 1u) != 0u || ground_entity != 0xffffffffu;
+    std::vector<compact_panel_row> rows;
+    if (cfg.show_speed)
+        rows.push_back({std::format("Speed: {:.0f} u/s", velocity.length_2d()), k_wm_text});
+    if (cfg.show_ground)
+        rows.push_back({on_ground ? "Grounded" : "Airborne",
+                        on_ground ? IM_COL32(110, 225, 135, 255) : IM_COL32(238, 68, 68, 255)});
+    if (cfg.show_velocity)
+    {
+        rows.push_back({std::format("Velocity X: {:.0f}", velocity.x), k_wm_muted});
+        rows.push_back({std::format("Velocity Y: {:.0f}", velocity.y), k_wm_muted});
+        rows.push_back({std::format("Velocity Z: {:.0f}", velocity.z), k_wm_muted});
+    }
+    if (rows.empty())
+        rows.push_back({"No movement data", k_wm_muted});
+    draw_compact_panel("Movement", rows, cfg.layout, m_state->movement, interactive);
+}
 
 void panels::draw_watermark(const bool interactive)
 {

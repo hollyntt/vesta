@@ -2049,6 +2049,21 @@ static void from_json(const json& j, general_profile::auto_stop& a)
     a.required_shoot_speed = std::clamp(a.required_shoot_speed, 0.0f, 60.0f);
 }
 
+static void to_json(json& j, const general_profile::movement_info& m)
+{
+    j = json{{"enabled", m.enabled}, {"layout", m.layout}, {"show_speed", m.show_speed},
+             {"show_ground", m.show_ground}, {"show_velocity", m.show_velocity}};
+}
+
+static void from_json(const json& j, general_profile::movement_info& m)
+{
+    read_field(j, "enabled", m.enabled);
+    read_field(j, "layout", m.layout);
+    read_field(j, "show_speed", m.show_speed);
+    read_field(j, "show_ground", m.show_ground);
+    read_field(j, "show_velocity", m.show_velocity);
+}
+
 static void to_json(json& j, const general_profile& m)
 {
     j = json{{"m_grenades", m.m_grenades},
@@ -2062,6 +2077,7 @@ static void to_json(json& j, const general_profile& m)
              {"m_keybind_list", m.m_keybind_list},
              {"m_bomb_info", m.m_bomb_info},
              {"m_bunny_hop", m.m_bunny_hop},
+             {"m_movement_info", m.m_movement_info},
              {"m_edge_jump", m.m_edge_jump},
              {"m_game_controls", m.m_game_controls},
              {"m_auto_stop", m.m_auto_stop},
@@ -2099,6 +2115,7 @@ static void from_json(const json& j, general_profile& m)
     read_field(j, "m_keybind_list", m.m_keybind_list);
     read_field(j, "m_bomb_info", m.m_bomb_info);
     read_field(j, "m_bunny_hop", m.m_bunny_hop);
+    read_field(j, "m_movement_info", m.m_movement_info);
     read_field(j, "m_edge_jump", m.m_edge_jump);
     read_field(j, "m_game_controls", m.m_game_controls);
     read_field(j, "m_auto_stop", m.m_auto_stop);
