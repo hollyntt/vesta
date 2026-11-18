@@ -201,6 +201,7 @@ void bhop_t::tick()
     if (m_jump_down && since_transition >= k_airborne_min_hold)
         release();
 
+
     if (on_ground && !m_edge_was_on_ground)
         m_edge_armed = true;
 

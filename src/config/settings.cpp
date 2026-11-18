@@ -1362,7 +1362,11 @@ static void to_json(json& j, const visual_profile::crosshair& c)
              {"penetration_enabled", c.penetration_enabled},
              {"penetration_color_yes", c.penetration_color_yes},
              {"penetration_color_no", c.penetration_color_no},
-             {"penetration_min_damage", c.penetration_min_damage}};
+             {"penetration_min_damage", c.penetration_min_damage},
+             {"spread_circle_enabled", c.spread_circle_enabled},
+             {"spread_circle_color", c.spread_circle_color},
+             {"spread_circle_thickness", c.spread_circle_thickness},
+             {"spread_circle_scale", c.spread_circle_scale}};
 }
 
 static void from_json(const json& j, visual_profile::crosshair& c)
@@ -1383,6 +1387,12 @@ static void from_json(const json& j, visual_profile::crosshair& c)
     read_field(j, "penetration_color_yes", c.penetration_color_yes);
     read_field(j, "penetration_color_no", c.penetration_color_no);
     read_field(j, "penetration_min_damage", c.penetration_min_damage);
+    read_field(j, "spread_circle_enabled", c.spread_circle_enabled);
+    read_field(j, "spread_circle_color", c.spread_circle_color);
+    read_field(j, "spread_circle_thickness", c.spread_circle_thickness);
+    read_field(j, "spread_circle_scale", c.spread_circle_scale);
+    c.spread_circle_thickness = std::isfinite(c.spread_circle_thickness) ? std::clamp(c.spread_circle_thickness, 0.5f, 5.0f) : 1.0f;
+    c.spread_circle_scale = std::isfinite(c.spread_circle_scale) ? std::clamp(c.spread_circle_scale, 0.1f, 50.0f) : 10.0f;
 }
 
 static void to_json(json& j, const visual_profile::chams::material& m)
@@ -1586,6 +1596,36 @@ static void from_json(const json& j, general_profile::custom_hitsound& c)
         std::copy(path.begin(), path.end(), c.path.begin());
     else if (!c.path.empty())
         c.path[0] = '\0';
+}
+
+static void to_json(json& j, const general_profile::custom_killsound& c)
+{
+    j = json{{"enabled", c.enabled}, {"path", std::string(c.path.data())}};
+}
+
+static void from_json(const json& j, general_profile::custom_killsound& c)
+{
+    read_field(j, "enabled", c.enabled);
+    std::string path;
+    read_field(j, "path", path);
+    if (path.size() < c.path.size())
+        std::copy(path.begin(), path.end(), c.path.begin());
+    else if (!c.path.empty())
+        c.path[0] = '\0';
+}
+
+static void to_json(json& j, const general_profile::kill_sound& k)
+{
+    j = json{{"enabled", k.enabled}, {"style", k.style}, {"volume", k.volume}};
+}
+
+static void from_json(const json& j, general_profile::kill_sound& k)
+{
+    read_field(j, "enabled", k.enabled);
+    read_field(j, "style", k.style);
+    read_field(j, "volume", k.volume);
+    k.style = std::clamp(k.style, 0, 9);
+    k.volume = std::clamp(k.volume, 0.0f, 1.0f);
 }
 
 static void to_json(json& j, const general_profile::angle_placement_helper& c)
@@ -2114,6 +2154,8 @@ static void to_json(json& j, const general_profile& m)
              {"m_hitmarker", m.m_hitmarker},
              {"m_hitsound", m.m_hitsound},
              {"m_custom_hitsound", m.m_custom_hitsound},
+             {"m_custom_killsound", m.m_custom_killsound},
+             {"m_kill_sound", m.m_kill_sound},
              {"m_watermark", m.m_watermark},
              {"m_spectator_list", m.m_spectator_list},
              {"m_event_log", m.m_event_log},
@@ -2157,6 +2199,8 @@ static void from_json(const json& j, general_profile& m)
     read_field(j, "m_hitmarker", m.m_hitmarker);
     read_field(j, "m_hitsound", m.m_hitsound);
     read_field(j, "m_custom_hitsound", m.m_custom_hitsound);
+    read_field(j, "m_custom_killsound", m.m_custom_killsound);
+    read_field(j, "m_kill_sound", m.m_kill_sound);
     read_field(j, "m_watermark", m.m_watermark);
     read_field(j, "m_spectator_list", m.m_spectator_list);
     read_field(j, "m_event_log", m.m_event_log);

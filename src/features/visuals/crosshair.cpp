@@ -3,7 +3,10 @@
 #include <game/state/constants.hpp>
 #include <game/state/pose.hpp>
 #include <simulation/collision.hpp>
+#include <simulation/ballistics.hpp>
 #include <features/visuals/visuals.hpp>
+
+#include <cmath>
 
 namespace features::visuals
 {
@@ -114,6 +117,33 @@ void crosshair_t::on_render(render::draw::draw_list& draw_list)
     {
         const auto& p = pieces[i];
         draw_list.add_rect_filled(p.x0, p.y0, p.x1 - p.x0, p.y1 - p.y0, crosshair_color);
+    }
+
+    // Spread circle: shows the maximum shot deviation cone projected onto the screen.
+    if (cfg.spread_circle_enabled)
+    {
+        const auto& ctx = simulation::ballistics().ctx();
+        if (ctx.valid && game::rules::is_firearm(ctx.weapon_type))
+        {
+            const auto fov = game::camera().fov();
+            const auto inaccuracy = ctx.inaccuracy;
+            const auto spread = ctx.spread;
+            const auto cone_angle = std::max(inaccuracy, spread);
+
+            if (cone_angle > 0.0f && fov > 0.0f && fov < 180.0f)
+            {
+                // inaccuracy/spread and fov are both in degrees; convert to radians for tan().
+                constexpr float k_deg_to_rad = 3.14159265358979323846f / 180.0f;
+                const auto screen_radius =
+                    (sw * 0.5f) * std::tan(cone_angle * k_deg_to_rad) / std::tan(fov * 0.5f * k_deg_to_rad) *
+                    cfg.spread_circle_scale;
+                if (screen_radius > 1.0f)
+                {
+                    draw_list.add_circle(center_x, center_y, screen_radius, cfg.spread_circle_color, 32,
+                                         cfg.spread_circle_thickness);
+                }
+            }
+        }
     }
 }
 

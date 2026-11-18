@@ -496,6 +496,20 @@ void overlay_t::apply_pending_file_request()
             config::publish_runtime_snapshot();
             break;
         }
+        case file_request::choose_custom_killsound:
+        {
+            auto& custom = config::general_settings.m_custom_killsound;
+            if (path.size() >= custom.path.size())
+            {
+                game::bound_memory().log.warning("custom killsound path is too long for the config buffer.");
+                break;
+            }
+            custom.path.fill('\0');
+            std::memcpy(custom.path.data(), path.data(), path.size());
+            custom.enabled = true;
+            config::publish_runtime_snapshot();
+            break;
+        }
     }
 }
 
@@ -1485,7 +1499,7 @@ void overlay_t::request_file(const file_request kind)
             {
                 chosen = pick_folder(m_hwnd, L"Choose a folder for Vesta configs");
             }
-            else if (kind == file_request::choose_custom_hitsound)
+            else if (kind == file_request::choose_custom_hitsound || kind == file_request::choose_custom_killsound)
             {
                 const auto initialized = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
                 if (SUCCEEDED(initialized))
@@ -1499,7 +1513,9 @@ void overlay_t::request_file(const file_request kind)
                     ofn.lpstrFile = path.data();
                     ofn.nMaxFile = static_cast<DWORD>(path.size());
                     ofn.lpstrFilter = L"Wave files (*.wav)\0*.wav\0";
-                    ofn.lpstrTitle = L"Choose a custom hitsound (.wav)";
+                    ofn.lpstrTitle = kind == file_request::choose_custom_killsound
+                                        ? L"Choose a custom killsound (.wav)"
+                                        : L"Choose a custom hitsound (.wav)";
                     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER | OFN_DONTADDTORECENT;
                     if (::GetOpenFileNameW(&ofn))
                         chosen = std::wstring{path.c_str()};
@@ -1541,6 +1557,12 @@ void overlay_t::request_custom_hitsound(std::uint8_t slot)
 {
     m_custom_hitsound_slot = slot;
     request_file(file_request::choose_custom_hitsound);
+}
+
+void overlay_t::request_custom_killsound(std::uint8_t slot)
+{
+    m_custom_killsound_slot = slot;
+    request_file(file_request::choose_custom_killsound);
 }
 
 bool overlay_t::open_composition_backend()

@@ -1,6 +1,7 @@
 #include <stdafx.hpp>
 #include <features/visuals/hitsound.hpp>
 #include <resources/sounds/hitsounds.hpp>
+#include <resources/sounds/killsounds.hpp>
 #include <config/settings.hpp>
 #include <diagnostics/journal.hpp>
 #include <filesystem>
@@ -272,20 +273,30 @@ struct embedded_sound
     std::size_t size{};
 };
 
-constexpr std::array sounds{embedded_sound{resources::sounds::soft, resources::sounds::soft_size},
-                            embedded_sound{resources::sounds::glass, resources::sounds::glass_size},
-                            embedded_sound{resources::sounds::pluck, resources::sounds::pluck_size},
-                            embedded_sound{resources::sounds::crisp, resources::sounds::crisp_size},
-                            embedded_sound{resources::sounds::flesh, resources::sounds::flesh_size}};
+constexpr std::array hit_sounds{embedded_sound{resources::sounds::soft, resources::sounds::soft_size},
+                                embedded_sound{resources::sounds::glass, resources::sounds::glass_size},
+                                embedded_sound{resources::sounds::pluck, resources::sounds::pluck_size},
+                                embedded_sound{resources::sounds::crisp, resources::sounds::crisp_size},
+                                embedded_sound{resources::sounds::flesh, resources::sounds::flesh_size}};
+
+constexpr std::array kill_sounds{embedded_sound{resources::sounds::bell, resources::sounds::bell_size},
+                                 embedded_sound{resources::sounds::shut, resources::sounds::shut_size},
+                                 embedded_sound{resources::sounds::rise, resources::sounds::rise_size},
+                                 embedded_sound{resources::sounds::buzz, resources::sounds::buzz_size},
+                                 embedded_sound{resources::sounds::snap, resources::sounds::snap_size}};
 
 } // namespace
 
-struct hitsound_player::implementation
+template <typename Config>
+struct sound_engine
 {
+    using custom_config_fn = const Config& (*)(const config::runtime_snapshot&);
+
     struct request
     {
         int style{};
         float volume{};
+        const char* custom_path{};
     };
     struct voice
     {
@@ -302,13 +313,19 @@ struct hitsound_player::implementation
     IXAudio2MasteringVoice* mastering{};
     std::vector<voice> voices{};
     std::thread worker{};
+    custom_config_fn custom_config{};
+    const char* log_tag{"[hitsound] "};
+    const std::array<embedded_sound, 5>* clips{&hit_sounds};
 
-    implementation()
+    explicit sound_engine(custom_config_fn config, const char* tag, const std::array<embedded_sound, 5>* embedded)
+        : custom_config(config)
+        , log_tag(tag)
+        , clips(embedded)
     {
         worker = std::thread([this] { run(); });
     }
 
-    ~implementation()
+    ~sound_engine()
     {
         {
             std::scoped_lock lock(mutex);
@@ -331,7 +348,7 @@ struct hitsound_player::implementation
             engine->Release();
     }
 
-    void enqueue(int style, float volume)
+    void enqueue(int style, float volume, const char* custom_path = nullptr)
     {
         {
             std::scoped_lock lock(mutex);
@@ -339,7 +356,7 @@ struct hitsound_player::implementation
                 return;
             if (requests.size() >= 32)
                 requests.pop_front();
-            requests.push_back({style, volume});
+            requests.push_back({style, volume, custom_path});
         }
         wake.notify_one();
     }
@@ -359,7 +376,7 @@ struct hitsound_player::implementation
                 next = requests.front();
                 requests.pop_front();
             }
-            play_now(next.style, next.volume);
+                play_now(next.style, next.volume, next.custom_path);
         }
         CoUninitialize();
     }
@@ -394,7 +411,12 @@ struct hitsound_player::implementation
                       });
     }
 
-    void play_now(int style, float volume)
+    void log(const std::string& message) const
+    {
+        OutputDebugStringA((std::string(log_tag) + message + "\n").c_str());
+    }
+
+    void play_now(int style, float volume, const char* custom_path = nullptr)
     {
         if (!initialize())
         {
@@ -410,66 +432,70 @@ struct hitsound_player::implementation
         std::shared_ptr<std::vector<unsigned char>> storage;
         std::uint32_t failure_code = failure::custom_disabled;
 
-        if (style >= 0 && style < static_cast<int>(sounds.size()))
+        if (style >= 0 && style < static_cast<int>(clips->size()))
         {
-            // Embedded sounds (0-4)
-            wave = parse_wav(sounds[style].bytes, sounds[style].size);
+            // Embedded sounds (0-4). Hit and kill players use different banks.
+            const auto& clip = (*clips)[static_cast<std::size_t>(style)];
+            wave = parse_wav(clip.bytes, clip.size);
             failure_code = failure::embedded_parse;
         }
         else
         {
             // Custom sound (style == 5)
-            const auto snapshot = config::get_runtime_snapshot();
-            if (snapshot)
+            const char* custom_cfg_path = custom_path;
+            if (!custom_cfg_path)
             {
-                const auto& custom_cfg = snapshot->general.m_custom_hitsound;
-                if (custom_cfg.enabled && custom_cfg.path.data()[0] != '\0')
+                const auto snapshot = config::get_runtime_snapshot();
+                if (snapshot)
                 {
-                    const auto path = path_from_config(custom_cfg.path.data());
-                    std::error_code ec;
-                    if (!std::filesystem::exists(path, ec))
+                    const auto& custom_cfg = custom_config(*snapshot);
+                    custom_cfg_path = custom_cfg.enabled && custom_cfg.path.data()[0] != '\0'
+                                          ? custom_cfg.path.data()
+                                          : nullptr;
+                }
+            }
+            if (custom_cfg_path && custom_cfg_path[0] != '\0')
+            {
+                const auto path = path_from_config(custom_cfg_path);
+                std::error_code ec;
+                if (!std::filesystem::exists(path, ec))
+                {
+                    failure_code = failure::file_not_found;
+                    log("custom file not found: " + std::string(custom_cfg_path));
+                }
+                else
+                {
+                    std::ifstream file(path, std::ios::binary);
+                    if (!file)
                     {
-                        failure_code = failure::file_not_found;
-                        debug_log("custom file not found: " + std::string(custom_cfg.path.data()));
+                        failure_code = failure::file_open;
+                        log("custom file open failed: " + std::string(custom_cfg_path));
                     }
                     else
                     {
-                        std::ifstream file(path, std::ios::binary);
-                        if (!file)
+                        storage = std::make_shared<std::vector<unsigned char>>(
+                            (std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+                        wave = parse_wav(storage->data(), storage->size());
+                        if (!wave)
                         {
-                            failure_code = failure::file_open;
-                            debug_log("custom file open failed: " + std::string(custom_cfg.path.data()));
-                        }
-                        else
-                        {
-                            storage = std::make_shared<std::vector<unsigned char>>(
-                                (std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                            wave = parse_wav(storage->data(), storage->size());
-                            if (!wave)
+                            failure_code = failure::parse_failed;
+                            log("custom file is not a supported WAV (" +
+                                std::to_string(storage->size()) + " bytes)");
+                            if (storage->size() >= 36 && std::memcmp(storage->data(), "RIFF", 4) == 0)
                             {
-                                failure_code = failure::parse_failed;
-                                debug_log("custom file is not a supported WAV (" +
-                                          std::to_string(storage->size()) + " bytes)");
-                                if (storage->size() >= 36 && std::memcmp(storage->data(), "RIFF", 4) == 0)
-                                {
-                                    // Best-effort header dump to help diagnose unsupported formats.
-                                    debug_log("  wFormatTag=" + std::to_string(read_u16(storage->data() + 20)) +
-                                              " channels=" + std::to_string(read_u16(storage->data() + 22)) +
-                                              " rate=" + std::to_string(read_u32(storage->data() + 24)) +
-                                              " bits=" + std::to_string(read_u16(storage->data() + 34)));
-                                }
+                                // Best-effort header dump to help diagnose unsupported formats.
+                                log("  wFormatTag=" + std::to_string(read_u16(storage->data() + 20)) +
+                                          " channels=" + std::to_string(read_u16(storage->data() + 22)) +
+                                          " rate=" + std::to_string(read_u32(storage->data() + 24)) +
+                                          " bits=" + std::to_string(read_u16(storage->data() + 34)));
                             }
                         }
                     }
                 }
-                else
-                {
-                    debug_log("custom hitsound disabled or path empty");
-                }
             }
             else
             {
-                debug_log("no runtime config snapshot");
+                log("custom sound disabled or path empty");
             }
         }
 
@@ -484,7 +510,7 @@ struct hitsound_player::implementation
             return;
         }
 
-        debug_log("loaded: tag=" + std::to_string(wave->wave_format()->wFormatTag) +
+        log("loaded: tag=" + std::to_string(wave->wave_format()->wFormatTag) +
                   " bits=" + std::to_string(wave->wave_format()->wBitsPerSample) +
                   " channels=" + std::to_string(wave->wave_format()->nChannels) +
                   " rate=" + std::to_string(wave->wave_format()->nSamplesPerSec) +
@@ -505,7 +531,7 @@ struct hitsound_player::implementation
         const HRESULT create_result = engine->CreateSourceVoice(&source, wave->wave_format());
         if (FAILED(create_result))
         {
-            debug_log("CreateSourceVoice failed, hr=" + std::to_string(static_cast<long>(create_result)) +
+            log("CreateSourceVoice failed, hr=" + std::to_string(static_cast<long>(create_result)) +
                       " tag=" + std::to_string(wave->wave_format()->wFormatTag) +
                       " bits=" + std::to_string(wave->wave_format()->wBitsPerSample) +
                       " rate=" + std::to_string(wave->wave_format()->nSamplesPerSec) +
@@ -530,6 +556,30 @@ struct hitsound_player::implementation
     }
 };
 
+struct hitsound_player::implementation
+    : sound_engine<config::general_profile::custom_hitsound>
+{
+    implementation()
+        : sound_engine([](const config::runtime_snapshot& snapshot) -> const config::general_profile::custom_hitsound& {
+              return snapshot.general.m_custom_hitsound;
+          },
+          "[hitsound] ", &hit_sounds)
+    {
+    }
+};
+
+struct killsound_player::implementation
+    : sound_engine<config::general_profile::custom_killsound>
+{
+    implementation()
+        : sound_engine([](const config::runtime_snapshot& snapshot) -> const config::general_profile::custom_killsound& {
+              return snapshot.general.m_custom_killsound;
+          },
+          "[killsound] ", &kill_sounds)
+    {
+    }
+};
+
 hitsound_player::hitsound_player()
     : m_impl(std::make_unique<implementation>())
 {
@@ -538,10 +588,34 @@ hitsound_player::~hitsound_player() = default;
 
 void hitsound_player::play(int style, float volume)
 {
+    play(style, volume, nullptr);
+}
+
+void hitsound_player::play(int style, float volume, const char* custom_path)
+{
     debug_log("play() style=" + std::to_string(style) + " volume=" + std::to_string(volume));
     if (!m_impl || volume <= 0.0f)
         return;
-    m_impl->enqueue(style, std::clamp(volume, 0.0f, 1.0f));
+    m_impl->enqueue(style, std::clamp(volume, 0.0f, 1.0f), custom_path);
+}
+
+killsound_player::killsound_player()
+    : m_impl(std::make_unique<implementation>())
+{
+}
+killsound_player::~killsound_player() = default;
+
+void killsound_player::play(int style, float volume)
+{
+    play(style, volume, nullptr);
+}
+
+void killsound_player::play(int style, float volume, const char* custom_path)
+{
+    OutputDebugStringA(("[killsound] play() style=" + std::to_string(style) + " volume=" + std::to_string(volume) + "\n").c_str());
+    if (!m_impl || volume <= 0.0f)
+        return;
+    m_impl->enqueue(style, std::clamp(volume, 0.0f, 1.0f), custom_path);
 }
 
 } // namespace features::visuals

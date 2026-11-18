@@ -396,6 +396,10 @@ struct visual_profile
         foundation::rgba penetration_color_yes{0, 255, 0, 255};
         foundation::rgba penetration_color_no{255, 0, 0, 255};
         float penetration_min_damage{90.0f};
+        bool spread_circle_enabled{false};
+        foundation::rgba spread_circle_color{255, 0, 0, 120};
+        float spread_circle_thickness{1.0f};
+        float spread_circle_scale{20.0f};
     } m_crosshair{};
 
     struct chams

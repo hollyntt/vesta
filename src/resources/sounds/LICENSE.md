@@ -21,3 +21,12 @@ It is cropped to the initial impact, normalized, faded out, and converted to
 mono 44.1 kHz 16-bit PCM for low-latency hitsound playback.
 
 Source: https://bigsoundbank.com/gore-grapefruit-6-s2600.html
+
+The kill-sound bank in `killsounds.hpp` is a separate selection from the same
+Kenney Interface Sounds pack, so a kill does not reuse a hit clip:
+
+- `bong_001.wav` (`bell`)
+- `close_002.wav` (`shut`)
+- `maximize_008.wav` (`rise`)
+- `error_008.wav` (`buzz`)
+- `toggle_002.wav` (`snap`)

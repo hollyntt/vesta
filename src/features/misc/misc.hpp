@@ -218,6 +218,7 @@ private:
     // Every transition is held long enough to cross a game input sample. If a
     // held edge-jump press survives long enough for the game to sample it.
     std::chrono::steady_clock::time_point m_last_transition{};
+
 };
 
 class angle_placement_helper_t final

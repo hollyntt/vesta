@@ -360,7 +360,7 @@ void draw_radar_tab()
 void draw_effects_tab()
 {
     auto& general = config::general_settings;
-    card("bullet_effects", "BULLET EFFECTS", 3,
+    card("bullet_effects", "BULLET EFFECTS", 12,
          [&]
          {
              auto& tracers = general.m_bullet_tracers;
@@ -415,6 +415,7 @@ void draw_effects_tab()
                               });
 
              static constexpr std::array<const char*, 6> hitsound_styles{"Soft", "Glass", "Pluck", "Crisp", "Flesh", "Custom"};
+             static constexpr std::array<const char*, 6> kill_sound_styles{"Bell", "Shut", "Rise", "Buzz", "Snap", "Custom"};
              auto& sound = general.m_hitsound;
              toggle_popup_row("Hit Sound", sound.enabled, 6,
                               [&]
@@ -440,8 +441,25 @@ void draw_effects_tab()
                                           slider_row("Damage Rise", sound.damage_rise, 0.0f, 100.0f, "px", 1.0f);
                                       });
                               });
-         });
 
+             auto& kill_sound = general.m_kill_sound;
+             toggle_popup_row("Kill Sound", kill_sound.enabled, 4,
+                              [&]
+                              {
+                                  select_row("Sound", kill_sound.style, kill_sound_styles);
+                                  slider_percent_row("Volume", kill_sound.volume);
+                                  if (button_row("Preview", "Play"))
+                                      features::visuals::killsounds().play(kill_sound.style, kill_sound.volume);
+                                  if (kill_sound.style == 5)
+                                  {
+                                      if (button_row("Browse", "Folder"))
+                                      {
+                                          ui::bound_overlay().request_custom_killsound(0);
+                                      }
+                                  }
+                              });
+
+         });
     // No Flash / No Smoke: the map drawn as lit surfaces with shadows, the same with edges, or edges only.
     static constexpr const char* world_styles[]{"Shaded", "Shaded + Lines", "Lines"};
     auto& no_flash = config::visual_settings.m_no_flash;
@@ -481,7 +499,7 @@ void draw_effects_tab()
 void draw_crosshair_tab()
 {
     auto& p = config::visual_settings.m_crosshair;
-    card("crosshair_settings", "CROSSHAIR SETTINGS", 4,
+    card("crosshair_settings", "CROSSHAIR SETTINGS", 16,
          [&]
          {
              toggle_row("Enable Crosshair", p.enabled);
@@ -494,6 +512,13 @@ void draw_crosshair_tab()
                                   slider_row("Gap", p.gap, 0.0f, 50.0f, "", 0.5f);
                               });
              slider_row("Thickness", p.thickness, 1.0f, 10.0f, "", 0.25f);
+             toggle_popup_row("Spread Circle", p.spread_circle_enabled, 3,
+                              [&]
+                              {
+                                  color_row("Color", p.spread_circle_color);
+                                  slider_row("Thickness", p.spread_circle_thickness, 0.5f, 5.0f, "", 0.25f);
+                                  slider_row("Scale", p.spread_circle_scale, 1.0f, 200.0f, "", 1.0f);
+                              });
          });
     card("crosshair_colors", "COLORS", 3,
          [&]

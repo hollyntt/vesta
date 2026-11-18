@@ -87,6 +87,19 @@ struct general_profile
         std::array<char, 260> path{};
     } m_custom_hitsound{};
 
+    struct custom_killsound
+    {
+        bool enabled{false};
+        std::array<char, 260> path{};
+    } m_custom_killsound{};
+
+    struct kill_sound
+    {
+        bool enabled{false};
+        int style{0}; // 0-4 embedded, 5 custom (defaults to bell, distinct from hit)
+        float volume{0.55f};
+    } m_kill_sound{};
+
     struct grenades
     {
         bool enabled{true};

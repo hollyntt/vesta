@@ -273,9 +273,19 @@ void draw_grenades_tab()
 void draw_movement_tab()
 {
     auto& p = config::general_settings;
-    card("movement", "MOVEMENT", 2,
+    card("movement", "MOVEMENT", 12,
          [&]
          {
+             toggle_popup_row("Angle Placement", p.m_angle_placement.enabled, 6,
+                              [&]
+                              {
+                                  toggle_row("Show Wall Distance", p.m_angle_placement.show_wall_distance);
+                                  toggle_row("Show Lateral Markers", p.m_angle_placement.show_lateral_markers);
+                                  slider_row("Scan Distance", p.m_angle_placement.scan_distance, 64.0f, 300.0f, "", 1.0f);
+                                  slider_row("Marker Spacing", p.m_angle_placement.marker_spacing, 20.0f, 96.0f, "", 1.0f);
+                                  slider_row("Refresh", p.m_angle_placement.refresh_seconds, 0.1f, 1.0f, "s", 0.05f);
+                                  color_row("Color", p.m_angle_placement.color);
+                              });
              toggle_popup_row("Enable Bunny Hop", p.m_bunny_hop.enabled, 4,
                               [&]
                               {
@@ -286,16 +296,6 @@ void draw_movement_tab()
                               });
              toggle_popup_row("Enable Edge Jump", p.m_edge_jump.enabled, 1,
                               [&] { keybind_row("Activation Key", p.m_edge_jump.activation_key); });
-             toggle_popup_row("Angle Placement", p.m_angle_placement.enabled, 4,
-                              [&]
-                              {
-                                  toggle_row("Show Wall Distance", p.m_angle_placement.show_wall_distance);
-                                  toggle_row("Show Lateral Markers", p.m_angle_placement.show_lateral_markers);
-                                  slider_row("Scan Distance", p.m_angle_placement.scan_distance, 64.0f, 300.0f, "", 1.0f);
-                                  slider_row("Marker Spacing", p.m_angle_placement.marker_spacing, 20.0f, 96.0f, "", 1.0f);
-                                  slider_row("Refresh", p.m_angle_placement.refresh_seconds, 0.1f, 1.0f, "s", 0.05f);
-                                  color_row("Color", p.m_angle_placement.color);
-                              });
          });
 }
 

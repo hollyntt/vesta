@@ -653,6 +653,19 @@ void bullet_impacts_t::emit_confirmed_hit(const std::uintptr_t pawn, const found
     const auto& feedback = m_config_snapshot->general.m_hitsound;
     if (feedback.enabled)
         features::visuals::hitsounds().play(feedback.style, feedback.volume);
+
+    // Kill sound: play when the confirmed hit was a kill and kill sound is enabled
+    if (killed)
+    {
+        const auto& kill_feedback = m_config_snapshot->general.m_kill_sound;
+        if (kill_feedback.enabled)
+        {
+            const char* custom_killsound_path =
+                kill_feedback.style == 5 ? m_config_snapshot->general.m_custom_killsound.path.data() : nullptr;
+            features::visuals::killsounds().play(kill_feedback.style, kill_feedback.volume, custom_killsound_path);
+        }
+    }
+
     if (feedback.show_damage)
     {
         m_damage_popups.push_back({position, std::clamp(damage, 1, 1000), now});
