@@ -205,6 +205,19 @@ struct general_profile
         int activation_key{VK_XBUTTON1};
     } m_edge_jump{};
 
+        // Visual-only wall-distance and lateral-position overlay. This does not
+        // use enemy data and cannot modify movement, view angles or firing.
+        struct angle_placement_helper
+        {
+            bool enabled{false};
+            bool show_lateral_markers{true};
+            bool show_wall_distance{true};
+            float scan_distance{192.0f};
+            float marker_spacing{40.0f};
+            float refresh_seconds{0.25f};
+            foundation::rgba color{110, 205, 245, 215};
+        } m_angle_placement{};
+
     // Walk bot (its own Misc tab): walks the player along routes over the map's navigation mesh by pressing the
     // movement keys and turning the view like a player, plus round and match automation around it.
     struct walk_bot
@@ -316,6 +329,13 @@ struct general_profile
     bool limit_fps{true};
     int fps_limit{240};
     bool use_gpu{true};
+    // Conserves GPU time and limits blocking memory reads on the render thread.
+    // A user can turn this off to compare rendering behavior.
+    bool performance_mode{true};
+    // Visual-only compensation; can be turned off without changing frame pacing.
+    bool visual_camera_prediction{true};
+    // Passive camera/pose comparison and opt-in 10 Hz telemetry; off by default.
+    bool esp_sync_probe{false};
     // ui::resource_priority levels: 0 game first, 1 balanced, 2 overlay first. The defaults are the long-standing
     // behaviour: the same CPU class as the game, GPU work below it.
     int cpu_priority{1};

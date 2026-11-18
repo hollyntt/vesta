@@ -485,7 +485,8 @@ void overlay_t::apply_pending_file_request()
         {
             auto& custom = config::general_settings.m_custom_hitsound;
             custom.enabled = true;
-            std::copy(chosen.u8string().begin(), chosen.u8string().end(), custom.path.begin());
+            std::string s = std::string(chosen.u8string().begin(), chosen.u8string().end());
+            std::copy(s.begin(), s.end(), custom.path.begin());
             if (!custom.path.empty())
                 custom.path[custom.path.size() - 1] = '\0';
             break;
@@ -586,6 +587,7 @@ void overlay_t::draw_world(render::draw::draw_list& draw_list)
         features::visuals::crosshair().on_render(draw_list);
         features::visuals::grenade_prediction().on_render(draw_list);
         features::misc::nade_helper().on_render(draw_list);
+        features::misc::angle_placement_helper().on_render(draw_list);
         features::misc::walk_bot().on_render(draw_list);
         features::visuals::bullet_impacts().on_render(draw_list);
         features::aimbot::aim().on_render(draw_list);

@@ -1588,6 +1588,32 @@ static void from_json(const json& j, general_profile::custom_hitsound& c)
         c.path[0] = '\0';
 }
 
+static void to_json(json& j, const general_profile::angle_placement_helper& c)
+{
+    j = nlohmann::json::object();
+    j["enabled"] = c.enabled;
+    j["show_lateral_markers"] = c.show_lateral_markers;
+    j["show_wall_distance"] = c.show_wall_distance;
+    j["scan_distance"] = c.scan_distance;
+    j["marker_spacing"] = c.marker_spacing;
+    j["refresh_seconds"] = c.refresh_seconds;
+    j["color"] = c.color;
+}
+
+static void from_json(const json& j, general_profile::angle_placement_helper& c)
+{
+    read_field(j, "enabled", c.enabled);
+    read_field(j, "show_lateral_markers", c.show_lateral_markers);
+    read_field(j, "show_wall_distance", c.show_wall_distance);
+    read_field(j, "scan_distance", c.scan_distance);
+    read_field(j, "marker_spacing", c.marker_spacing);
+    read_field(j, "refresh_seconds", c.refresh_seconds);
+    read_field(j, "color", c.color);
+    c.scan_distance = std::clamp(c.scan_distance, 64.0f, 300.0f);
+    c.marker_spacing = std::clamp(c.marker_spacing, 20.0f, 96.0f);
+    c.refresh_seconds = std::clamp(c.refresh_seconds, 0.10f, 1.0f);
+}
+
 static void to_json(json& j, const general_profile::hitsound& h)
 {
     j = json{{"enabled", h.enabled},
@@ -2096,6 +2122,7 @@ static void to_json(json& j, const general_profile& m)
              {"m_bunny_hop", m.m_bunny_hop},
              {"m_movement_info", m.m_movement_info},
              {"m_edge_jump", m.m_edge_jump},
+             {"m_angle_placement", m.m_angle_placement},
              {"m_game_controls", m.m_game_controls},
              {"m_auto_stop", m.m_auto_stop},
              {"m_walk_bot", m.m_walk_bot},
@@ -2116,7 +2143,10 @@ static void to_json(json& j, const general_profile& m)
              {"fps_limit", m.fps_limit},
              {"use_gpu", m.use_gpu},
              {"cpu_priority", m.cpu_priority},
-             {"gpu_priority", m.gpu_priority}};
+             {"gpu_priority", m.gpu_priority},
+             {"performance_mode", m.performance_mode},
+             {"visual_camera_prediction", m.visual_camera_prediction},
+             {"esp_sync_probe", m.esp_sync_probe}};
 }
 
 static void from_json(const json& j, general_profile& m)
@@ -2135,6 +2165,7 @@ static void from_json(const json& j, general_profile& m)
     read_field(j, "m_bunny_hop", m.m_bunny_hop);
     read_field(j, "m_movement_info", m.m_movement_info);
     read_field(j, "m_edge_jump", m.m_edge_jump);
+    read_field(j, "m_angle_placement", m.m_angle_placement);
     read_field(j, "m_game_controls", m.m_game_controls);
     read_field(j, "m_auto_stop", m.m_auto_stop);
     read_field(j, "m_walk_bot", m.m_walk_bot);
@@ -2165,6 +2196,9 @@ static void from_json(const json& j, general_profile& m)
     read_field(j, "cpu_priority", m.cpu_priority);
     m.cpu_priority = std::clamp(m.cpu_priority, 0, 2);
     read_field(j, "gpu_priority", m.gpu_priority);
+    read_field(j, "performance_mode", m.performance_mode);
+    read_field(j, "visual_camera_prediction", m.visual_camera_prediction);
+    read_field(j, "esp_sync_probe", m.esp_sync_probe);
     m.gpu_priority = std::clamp(m.gpu_priority, 0, 2);
 }
 
