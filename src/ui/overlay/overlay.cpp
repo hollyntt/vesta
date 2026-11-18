@@ -460,10 +460,12 @@ void overlay_t::apply_pending_file_request()
         return;
     std::string path;
     file_request request{};
+    std::uint8_t custom_slot{0};
     {
         std::lock_guard<std::mutex> lock(m_cfg_mutex);
         path = m_cfg_path;
         request = m_cfg_request;
+        custom_slot = m_custom_hitsound_slot;
     }
     if (path.empty())
         return;
@@ -479,6 +481,15 @@ void overlay_t::apply_pending_file_request()
         case file_request::choose_config_folder:
             config::library().note(config::library().set_folder(chosen), "Folder selected");
             break;
+        case file_request::choose_custom_hitsound:
+        {
+            auto& custom = config::general_settings.m_custom_hitsound;
+            custom.enabled = true;
+            std::copy(chosen.u8string().begin(), chosen.u8string().end(), custom.path.begin());
+            if (!custom.path.empty())
+                custom.path[custom.path.size() - 1] = '\0';
+            break;
+        }
     }
 }
 
@@ -1467,28 +1478,42 @@ void overlay_t::request_file(const file_request kind)
             {
                 chosen = pick_folder(m_hwnd, L"Choose a folder for Vesta configs");
             }
+            else if (kind == file_request::choose_custom_hitsound)
+            {
+                const auto initialized = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+                if (SUCCEEDED(initialized))
+                {
+                    const foundation::scope_exit uninitialize{[]() noexcept { ::CoUninitialize(); }};
+                    ::AllowSetForegroundWindow(ASFW_ANY);
+                    std::wstring path(32768, L'\0');
+                    OPENFILENAMEW ofn{};
+                    ofn.lStructSize = sizeof(ofn);
+                    ofn.hwndOwner = NULL;
+                    ofn.lpstrFile = path.data();
+                    ofn.nMaxFile = static_cast<DWORD>(path.size());
+                    ofn.lpstrFilter = L"Wave files (*.wav)\0*.wav\0";
+                    ofn.lpstrTitle = L"Choose a custom hitsound (.wav)";
+                    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER | OFN_DONTADDTORECENT;
+                    if (::GetOpenFileNameW(&ofn))
+                        chosen = std::wstring{path.c_str()};
+                }
+            }
             else
             {
                 std::wstring path(32768, L'\0');
                 OPENFILENAMEW ofn{};
                 ofn.lStructSize = sizeof(ofn);
-                ofn.hwndOwner = m_hwnd;
+                ofn.hwndOwner = NULL;
                 ofn.lpstrFile = path.data();
                 ofn.nMaxFile = static_cast<DWORD>(path.size());
-                ofn.lCustData = reinterpret_cast<LPARAM>(this);
-                ofn.lpfnHook = &overlay_t::config_dialog_hook;
-                ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER | OFN_ENABLEHOOK |
-                            OFN_DONTADDTORECENT;
-                if (kind == file_request::import_lua)
-                {
-                    ofn.lpstrFilter = L"Lua scripts (*.lua)\0*.lua\0";
-                    ofn.lpstrTitle = L"Import Lua script into Vesta";
-                }
-                else
-                {
-                    ofn.lpstrFilter = L"Vesta config (*.cfg)\0*.cfg\0";
-                    ofn.lpstrTitle = L"Import a Vesta config";
-                }
+                ofn.lpstrFilter = kind == file_request::import_lua
+                    ? L"Lua scripts (*.lua)\0*.lua\0"
+                    : L"Vesta config (*.cfg)\0*.cfg\0";
+                ofn.lpstrTitle = kind == file_request::import_lua
+                    ? L"Import Lua script into Vesta"
+                    : L"Import a Vesta config";
+                ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR | OFN_EXPLORER | OFN_DONTADDTORECENT;
+                ::AllowSetForegroundWindow(ASFW_ANY);
                 if (::GetOpenFileNameW(&ofn))
                     chosen = std::wstring{path.c_str()};
             }
@@ -1503,6 +1528,12 @@ void overlay_t::request_file(const file_request kind)
                 m_cfg_ready.store(true, std::memory_order_release);
             }
         });
+}
+
+void overlay_t::request_custom_hitsound(std::uint8_t slot)
+{
+    m_custom_hitsound_slot = slot;
+    request_file(file_request::choose_custom_hitsound);
 }
 
 bool overlay_t::open_composition_backend()

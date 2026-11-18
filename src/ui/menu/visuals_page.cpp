@@ -8,7 +8,10 @@
 #include <features/chams/renderer.hpp>
 #include <render/text/localization.hpp>
 #include <ui/menu/menu.hpp>
+#include <ui/menu/internal.hpp>
 #include <ui/overlay/input.hpp>
+#include <ui/overlay/overlay.hpp>
+#include <ui/presentation.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <d3d11.h>
@@ -411,15 +414,22 @@ void draw_effects_tab()
                                   slider_row("Marker Duration", marker.duration, 0.15f, 1.5f, "s", 0.05f);
                               });
 
-             static constexpr std::array<const char*, 5> hitsound_styles{"Soft", "Glass", "Pluck", "Crisp", "Flesh"};
+             static constexpr std::array<const char*, 6> hitsound_styles{"Soft", "Glass", "Pluck", "Crisp", "Flesh", "Custom"};
              auto& sound = general.m_hitsound;
-             toggle_popup_row("Hit Sound", sound.enabled, 4,
+             toggle_popup_row("Hit Sound", sound.enabled, 6,
                               [&]
                               {
                                   select_row("Sound", sound.style, hitsound_styles);
                                   slider_percent_row("Volume", sound.volume);
                                   if (button_row("Preview", "Play"))
                                       features::visuals::hitsounds().play(sound.style, sound.volume);
+                                  if (sound.style == 5)
+                                  {
+                                      if (button_row("Browse", "Folder"))
+                                      {
+                                          ui::bound_overlay().request_custom_hitsound(0);
+                                      }
+                                  }
                                   toggle_popup_row(
                                       "Floating Damage", sound.show_damage, 4,
                                       [&]

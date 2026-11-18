@@ -72,7 +72,7 @@ struct general_profile
     struct hitsound
     {
         bool enabled{true};
-        int style{4}; // 0 soft, 1 glass, 2 pluck, 3 crisp, 4 flesh
+        int style{4}; // 0-4 embedded, 5 custom
         float volume{0.55f};
         bool show_damage{true};
         foundation::rgba damage_color{255, 108, 112, 255};
@@ -80,6 +80,12 @@ struct general_profile
         float damage_duration{0.75f};
         float damage_rise{30.0f};
     } m_hitsound{};
+
+    struct custom_hitsound
+    {
+        bool enabled{false};
+        std::array<char, 260> path{};
+    } m_custom_hitsound{};
 
     struct grenades
     {

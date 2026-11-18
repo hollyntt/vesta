@@ -79,8 +79,10 @@ public:
         import_config,
         choose_config_folder,
         import_lua,
+        choose_custom_hitsound,
     };
     void request_file(file_request kind);
+    void request_custom_hitsound(std::uint8_t slot);
 
 private:
     friend struct menu_render_test_access;
@@ -141,6 +143,7 @@ private:
     std::mutex m_cfg_mutex{};
     std::string m_cfg_path{};
     file_request m_cfg_request{file_request::import_config};
+    std::uint8_t m_custom_hitsound_slot{0};
     std::jthread m_cfg_dialog_thread{};
     std::atomic<HWND> m_cfg_dialog_hwnd{};
     std::atomic<DWORD> m_cfg_dialog_thread_id{};

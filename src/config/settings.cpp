@@ -1572,6 +1572,22 @@ static void from_json(const json& j, general_profile::hitmarker& h)
     read_field(j, "duration", h.duration);
 }
 
+static void to_json(json& j, const general_profile::custom_hitsound& c)
+{
+    j = json{{"enabled", c.enabled}, {"path", std::string(c.path.data())}};
+}
+
+static void from_json(const json& j, general_profile::custom_hitsound& c)
+{
+    read_field(j, "enabled", c.enabled);
+    std::string path;
+    read_field(j, "path", path);
+    if (path.size() < c.path.size())
+        std::copy(path.begin(), path.end(), c.path.begin());
+    else if (!c.path.empty())
+        c.path[0] = '\0';
+}
+
 static void to_json(json& j, const general_profile::hitsound& h)
 {
     j = json{{"enabled", h.enabled},
@@ -1594,7 +1610,7 @@ static void from_json(const json& j, general_profile::hitsound& h)
     read_field(j, "damage_size", h.damage_size);
     read_field(j, "damage_duration", h.damage_duration);
     read_field(j, "damage_rise", h.damage_rise);
-    h.style = std::clamp(h.style, 0, 4);
+    h.style = std::clamp(h.style, 0, 9);
     h.volume = std::clamp(h.volume, 0.0f, 1.0f);
     h.damage_size = std::clamp(h.damage_size, 8.0f, 28.0f);
     h.damage_duration = std::clamp(h.damage_duration, 0.15f, 2.0f);
@@ -2071,6 +2087,7 @@ static void to_json(json& j, const general_profile& m)
              {"m_bullet_tracers", m.m_bullet_tracers},
              {"m_hitmarker", m.m_hitmarker},
              {"m_hitsound", m.m_hitsound},
+             {"m_custom_hitsound", m.m_custom_hitsound},
              {"m_watermark", m.m_watermark},
              {"m_spectator_list", m.m_spectator_list},
              {"m_event_log", m.m_event_log},
@@ -2109,6 +2126,7 @@ static void from_json(const json& j, general_profile& m)
     read_field(j, "m_bullet_tracers", m.m_bullet_tracers);
     read_field(j, "m_hitmarker", m.m_hitmarker);
     read_field(j, "m_hitsound", m.m_hitsound);
+    read_field(j, "m_custom_hitsound", m.m_custom_hitsound);
     read_field(j, "m_watermark", m.m_watermark);
     read_field(j, "m_spectator_list", m.m_spectator_list);
     read_field(j, "m_event_log", m.m_event_log);

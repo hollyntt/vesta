@@ -1,6 +1,9 @@
 #include <stdafx.hpp>
 #include <features/visuals/hitsound.hpp>
 #include <resources/sounds/hitsounds.hpp>
+#include <config/settings.hpp>
+#include <filesystem>
+#include <fstream>
 
 #include <xaudio2.h>
 #include <objbase.h>
@@ -198,11 +201,45 @@ struct hitsound_player::implementation
 
     void play_now(int style, float volume)
     {
-        const auto index = static_cast<std::size_t>(std::clamp(style, 0, static_cast<int>(sounds.size()) - 1));
-        const auto wave = parse_wav(sounds[index].bytes, sounds[index].size);
-        if (!wave || !initialize())
+        if (!initialize())
             return;
+
         collect_finished();
+
+        std::optional<wav_view> wave;
+
+        if (style < 5)
+        {
+            // Embedded sounds (0-4)
+            wave = parse_wav(sounds[style].bytes, sounds[style].size);
+        }
+        else
+        {
+            // Custom sound (style == 5)
+            const auto snapshot = config::get_runtime_snapshot();
+            if (snapshot)
+            {
+                const auto& custom_cfg = snapshot->general.m_custom_hitsound;
+                if (custom_cfg.enabled && !std::string(custom_cfg.path.data()).empty())
+                {
+                    const auto path = std::filesystem::path(custom_cfg.path.data());
+                    if (std::filesystem::exists(path))
+                    {
+                        std::ifstream file(path, std::ios::binary);
+                        if (file)
+                        {
+                            std::vector<unsigned char> buffer((std::istreambuf_iterator<char>(file)),
+                                                              std::istreambuf_iterator<char>());
+                            wave = parse_wav(buffer.data(), buffer.size());
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!wave)
+            return;
+
         if (voices.size() >= 16)
         {
             auto& oldest = voices.front();
