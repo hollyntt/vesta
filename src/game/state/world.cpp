@@ -126,6 +126,8 @@ struct sampling_demand
          config::combat_profile::activation_active(combat.aimbot.activation_mode, combat.aimbot.key)) ||
         (combat.triggerbot.enabled && !independent_seed &&
          config::combat_profile::activation_active(combat.triggerbot.activation_mode, combat.triggerbot.key)) ||
+        (snapshot->general.m_autofire.enabled &&
+         config::combat_profile::activation_active(snapshot->general.m_autofire.activation_mode, snapshot->general.m_autofire.key)) ||
         (snapshot->combat.global.grenade_aim.enabled && key_down(snapshot->combat.global.grenade_aim.key));
     const auto& radar_cfg = snapshot->visual.m_radar;
     const auto radar_active = radar_cfg.active();

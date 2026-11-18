@@ -24,6 +24,7 @@
 
 #include <ui/menu/internal.hpp>
 #include <ui/menu/library_widgets.hpp>
+#include <ui/menu/combat_widgets.hpp>
 #include <dxgi.h>
 #include <wrl/client.h>
 #include <ui/menu/card_metrics.hpp>
@@ -103,7 +104,24 @@ void draw_general_tab()
     auto& p = config::general_settings;
     // Left: automation first, then the movement binds; right: the action binds and support. Both columns stay below the
     // page height (568) with the support status line shown, so nothing scrolls.
-    card_in_column("automation", "AUTOMATION", 1, 0, [&] { toggle_row("Auto Accept Match", p.auto_accept); });
+    card_in_column("automation", "AUTOMATION", 2, 0,
+               [&]
+               {
+                   toggle_row("Auto Accept Match", p.auto_accept);
+                       auto& af = p.m_autofire;
+                        toggle_popup_row("Autofire", af.enabled, 9, [&] {
+                        ui::menu::combat::master_row(af.enabled, af.activation_mode);
+                           if (af.activation_mode != config::combat_profile::activation::always)
+                           keybind_row("Key", af.key);
+                           aim_parts_row(af.hitbox_parts);
+                           ui::menu::combat::checks_row(af.checks);
+                           ui::menu::combat::visibility_row(af.checks);
+                           slider_row("Min Damage", af.min_damage, 1.0f, 500.0f, " HP", 1.0f);
+                           toggle_row("Autowall", af.autowall);
+                           toggle_row("Auto Reload", af.auto_reload);
+                                                   ui::menu::combat::rcs_row(af.rcs);
+                        });
+               });
     // The game's own binds: what the features press (movement, attack, use, reload, buy menu) has to match them.
     auto& keys = p.m_game_controls;
     card_in_column("game_movement", "GAME MOVEMENT BINDS", 7, 0,
@@ -273,7 +291,7 @@ void draw_grenades_tab()
 void draw_movement_tab()
 {
     auto& p = config::general_settings;
-    card("movement", "MOVEMENT", 12,
+    card("movement", "MOVEMENT", 3,
          [&]
          {
              toggle_popup_row("Angle Placement", p.m_angle_placement.enabled, 6,

@@ -7,6 +7,7 @@
 
 #include <foundation/color.hpp>
 #include <config/game_controls.hpp>
+#include <config/combat.hpp>
 
 namespace config
 {
@@ -317,6 +318,23 @@ struct general_profile
         float stop_speed{8.0f};
         float required_shoot_speed{34.0f};
     } m_auto_stop{};
+
+    // Standalone autofire: hold attack whenever a visible target passes the checks.
+    struct autofire
+    {
+        bool enabled{false};
+        int activation_mode{config::combat_profile::activation::always};
+        int key{0x43}; // C key
+        int hitbox_parts{config::combat_profile::aim_part::all};
+        bool autowall{true};
+        float min_damage{30.0f};
+        bool visible_only{true};
+        bool auto_reload{true};
+            config::combat_profile::rcs_settings rcs{};
+        config::combat_profile::legit_checks checks{
+            .airborne = true, .flashed = true, .smoke = true, .flash_threshold = 85.0f,
+            .walls = config::combat_profile::wall_policy::penetration};
+    } m_autofire{};
 
     // Interface language: 0 English, 1 Russian (render::localization::id).
     static constexpr int k_language_count = 2;

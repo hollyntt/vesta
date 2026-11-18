@@ -346,9 +346,13 @@ void aimbot_t::tick()
     const auto now = std::chrono::steady_clock::now();
     const auto requested_cfg = runtime_config()->combat.get(game::local_player().weapon_type());
     const auto walk_autofire = g_walk_autofire.load(std::memory_order_acquire);
+    const auto standalone_autofire = 
+        runtime_config()->general.m_autofire.enabled &&
+        config::combat_profile::activation_active(runtime_config()->general.m_autofire.activation_mode,
+                                                   runtime_config()->general.m_autofire.key);
     const auto trigger_activation_active =
-        walk_autofire || (requested_cfg.triggerbot.enabled &&
-                          config::combat_profile::activation_active(requested_cfg.triggerbot.activation_mode,
+            walk_autofire || standalone_autofire || (requested_cfg.triggerbot.enabled &&
+                         config::combat_profile::activation_active(requested_cfg.triggerbot.activation_mode,
                                                                     requested_cfg.triggerbot.key));
 
     update_revolver_pre_cock(ctx, requested_cfg.triggerbot);
@@ -380,7 +384,7 @@ void aimbot_t::tick()
     const auto independent_seed = requested_cfg.triggerbot.seed_type != config::combat_profile::seed_mode::none;
     const auto trigger_requested =
         !independent_seed &&
-        (walk_autofire || (requested_cfg.triggerbot.enabled &&
+        (walk_autofire || standalone_autofire || (requested_cfg.triggerbot.enabled &&
                            config::combat_profile::activation_active(requested_cfg.triggerbot.activation_mode,
                                                                      requested_cfg.triggerbot.key)));
     const auto dynamic_fov_visualization_requested =
@@ -461,12 +465,77 @@ void aimbot_t::tick()
     }
     if (visualization_only)
         return;
-    if (ctx.is_reloading || ctx.clip == 0)
+
+    // Standalone autofire: hold attack whenever a visible target passes the checks.
+        // Run autofire BEFORE the early return for clip == 0 so it can handle reload logic
+    if (runtime_config()->general.m_autofire.enabled &&
+        config::combat_profile::activation_active(runtime_config()->general.m_autofire.activation_mode,
+                                                   runtime_config()->general.m_autofire.key))
     {
-        cancel_scheduled_trigger();
+        // Local player checks (airborne, flashed, etc.)
+        if (local_checks_blocked(runtime_config()->general.m_autofire.checks))
+        {
+            platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_up);
+            flush_recoil_input();
+            return;
+        }
+
+        // Check if there's any valid target visible and in crosshair
+        if (!frame.targets->empty())
+        {
+            const auto eye = frame.eye;
+            const auto& view_angles = frame.view_angles;
+            
+            // Build triggerbot config for hitbox detection
+            config::combat_profile::triggerbot tb_cfg;
+            tb_cfg.activation_mode = config::combat_profile::activation::always;
+            tb_cfg.hitbox_parts = runtime_config()->general.m_autofire.hitbox_parts;
+            tb_cfg.checks = runtime_config()->general.m_autofire.checks;
+            tb_cfg.checks.walls = runtime_config()->general.m_autofire.autowall 
+                ? config::combat_profile::wall_policy::penetration 
+                : config::combat_profile::wall_policy::block;
+            
+            // Use triggerbot's trace_direction to check if target is in crosshair
+            foundation::vec3 forward{};
+            view_angles.to_directions(&forward, nullptr, nullptr);
+            const auto result = trace_direction(eye, forward, *frame.targets, tb_cfg);
+            
+                // Auto-reload when out of ammo
+                const auto auto_reload = runtime_config()->general.m_autofire.auto_reload;
+                const bool need_reload = auto_reload && (ctx.clip == 0 || ctx.is_reloading);
+            
+                if (need_reload && !ctx.is_reloading)
+                {
+                    // Press reload key
+                    const auto reload_key = config::general_settings.m_game_controls.reload;
+                    platform::windows::bound_input().key(reload_key, true);
+                    platform::windows::bound_input().key(reload_key, false);
+                }
+            
+                // Hold attack if we found a valid target in crosshair and have ammo
+                if (result.player && ctx.clip > 0 && !ctx.is_reloading)
+            {
+                platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_down);
+            }
+            else
+            {
+                platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_up);
+            }
+        }
+        else
+        {
+            platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_up);
+        }
         flush_recoil_input();
         return;
     }
+
+        if (ctx.is_reloading || ctx.clip == 0)
+        {
+            cancel_scheduled_trigger();
+            flush_recoil_input();
+            return;
+        }
 
     if ((cfg.triggerbot.enabled || walk_autofire) &&
         cfg.triggerbot.seed_type == config::combat_profile::seed_mode::none)
@@ -474,6 +543,19 @@ void aimbot_t::tick()
 
     if (m_trigger_held)
         note_view_engaged(m_trigger_target_valid ? m_trigger_target.pawn : 0);
+    
+        // Run RCS for autofire if enabled
+        if (runtime_config()->general.m_autofire.enabled &&
+            config::combat_profile::activation_active(runtime_config()->general.m_autofire.activation_mode,
+                                                       runtime_config()->general.m_autofire.key) &&
+            runtime_config()->general.m_autofire.rcs.enabled)
+        {
+            // Create a temporary aimbot config with autofire's RCS settings
+            auto temp_aimbot_cfg = cfg.aimbot;
+            temp_aimbot_cfg.rcs = runtime_config()->general.m_autofire.rcs;
+            recoil_control(temp_aimbot_cfg, true);
+        }
+    
     if (cfg.aimbot.enabled && !m_trigger_held)
     {
         if (!config::combat_profile::activation_active(cfg.aimbot.activation_mode, cfg.aimbot.key))

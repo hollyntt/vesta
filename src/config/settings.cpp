@@ -1366,7 +1366,9 @@ static void to_json(json& j, const visual_profile::crosshair& c)
              {"spread_circle_enabled", c.spread_circle_enabled},
              {"spread_circle_color", c.spread_circle_color},
              {"spread_circle_thickness", c.spread_circle_thickness},
-             {"spread_circle_scale", c.spread_circle_scale}};
+             {"spread_circle_scale", c.spread_circle_scale},
+             {"spread_circle_min_size", c.spread_circle_min_size},
+             {"spread_circle_max_size", c.spread_circle_max_size}};
 }
 
 static void from_json(const json& j, visual_profile::crosshair& c)
@@ -1391,8 +1393,12 @@ static void from_json(const json& j, visual_profile::crosshair& c)
     read_field(j, "spread_circle_color", c.spread_circle_color);
     read_field(j, "spread_circle_thickness", c.spread_circle_thickness);
     read_field(j, "spread_circle_scale", c.spread_circle_scale);
+    read_field(j, "spread_circle_min_size", c.spread_circle_min_size);
+    read_field(j, "spread_circle_max_size", c.spread_circle_max_size);
     c.spread_circle_thickness = std::isfinite(c.spread_circle_thickness) ? std::clamp(c.spread_circle_thickness, 0.5f, 5.0f) : 1.0f;
-    c.spread_circle_scale = std::isfinite(c.spread_circle_scale) ? std::clamp(c.spread_circle_scale, 0.1f, 50.0f) : 10.0f;
+    c.spread_circle_scale = std::isfinite(c.spread_circle_scale) ? std::clamp(c.spread_circle_scale, 1.0f, 200.0f) : 20.0f;
+    c.spread_circle_min_size = std::isfinite(c.spread_circle_min_size) ? std::clamp(c.spread_circle_min_size, 1.0f, 500.0f) : 5.0f;
+    c.spread_circle_max_size = std::isfinite(c.spread_circle_max_size) ? std::clamp(c.spread_circle_max_size, 1.0f, 500.0f) : 200.0f;
 }
 
 static void to_json(json& j, const visual_profile::chams::material& m)
@@ -2131,6 +2137,67 @@ static void from_json(const json& j, general_profile::auto_stop& a)
     a.required_shoot_speed = std::clamp(a.required_shoot_speed, 0.0f, 60.0f);
 }
 
+static void to_json(json& j, const general_profile::autofire& af)
+{
+    j = json{{"enabled", af.enabled},
+             {"activation_mode", af.activation_mode},
+             {"key", af.key},
+             {"hitbox_parts", af.hitbox_parts},
+             {"autowall", af.autowall},
+             {"min_damage", af.min_damage},
+             {"visible_only", af.visible_only},
+             {"auto_reload", af.auto_reload},
+             {"rcs", {{"enabled", af.rcs.enabled},
+                      {"start_bullet", af.rcs.start_bullet},
+                      {"pitch", af.rcs.pitch},
+                      {"yaw", af.rcs.yaw},
+                      {"response_ms", af.rcs.response_ms},
+                      {"smoothness", af.rcs.smoothness},
+                      {"randomness", af.rcs.randomness},
+                      {"drift", af.rcs.drift}}},
+             {"checks", {{"airborne", af.checks.airborne},
+                         {"flashed", af.checks.flashed},
+                         {"smoke", af.checks.smoke},
+                         {"flash_threshold", af.checks.flash_threshold},
+                         {"walls", af.checks.walls}}}};
+}
+
+static void from_json(const json& j, general_profile::autofire& af)
+{
+    read_field(j, "enabled", af.enabled);
+    read_field(j, "activation_mode", af.activation_mode);
+    read_field(j, "key", af.key);
+    read_field(j, "hitbox_parts", af.hitbox_parts);
+    read_field(j, "autowall", af.autowall);
+    read_field(j, "min_damage", af.min_damage);
+    read_field(j, "visible_only", af.visible_only);
+    read_field(j, "auto_reload", af.auto_reload);
+    if (j.contains("rcs"))
+    {
+        const auto& r = j.at("rcs");
+        read_field(r, "enabled", af.rcs.enabled);
+        read_field(r, "start_bullet", af.rcs.start_bullet);
+        read_field(r, "pitch", af.rcs.pitch);
+        read_field(r, "yaw", af.rcs.yaw);
+        read_field(r, "response_ms", af.rcs.response_ms);
+        read_field(r, "smoothness", af.rcs.smoothness);
+        read_field(r, "randomness", af.rcs.randomness);
+        read_field(r, "drift", af.rcs.drift);
+    }
+    if (j.contains("checks"))
+    {
+        const auto& c = j.at("checks");
+        read_field(c, "airborne", af.checks.airborne);
+        read_field(c, "flashed", af.checks.flashed);
+        read_field(c, "smoke", af.checks.smoke);
+        read_field(c, "flash_threshold", af.checks.flash_threshold);
+        read_field(c, "walls", af.checks.walls);
+    }
+    af.activation_mode = std::clamp(af.activation_mode, 0, 2);
+    af.min_damage = std::clamp(af.min_damage, 1.0f, 500.0f);
+    af.checks.flash_threshold = std::clamp(af.checks.flash_threshold, 0.0f, 255.0f);
+}
+
 static void to_json(json& j, const general_profile::movement_info& m)
 {
     j = json{{"enabled", m.enabled}, {"layout", m.layout}, {"show_speed", m.show_speed},
@@ -2167,6 +2234,7 @@ static void to_json(json& j, const general_profile& m)
              {"m_angle_placement", m.m_angle_placement},
              {"m_game_controls", m.m_game_controls},
              {"m_auto_stop", m.m_auto_stop},
+             {"m_autofire", m.m_autofire},
              {"m_walk_bot", m.m_walk_bot},
              {"language", m.language},
              {"menu_scale", m.menu_scale},
@@ -2212,6 +2280,7 @@ static void from_json(const json& j, general_profile& m)
     read_field(j, "m_angle_placement", m.m_angle_placement);
     read_field(j, "m_game_controls", m.m_game_controls);
     read_field(j, "m_auto_stop", m.m_auto_stop);
+    read_field(j, "m_autofire", m.m_autofire);
     read_field(j, "m_walk_bot", m.m_walk_bot);
     read_field(j, "language", m.language);
     m.language = std::clamp(m.language, 0, general_profile::k_language_count - 1);

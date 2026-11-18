@@ -417,7 +417,7 @@ void draw_effects_tab()
              static constexpr std::array<const char*, 6> hitsound_styles{"Soft", "Glass", "Pluck", "Crisp", "Flesh", "Custom"};
              static constexpr std::array<const char*, 6> kill_sound_styles{"Bell", "Shut", "Rise", "Buzz", "Snap", "Custom"};
              auto& sound = general.m_hitsound;
-             toggle_popup_row("Hit Sound", sound.enabled, 6,
+             toggle_popup_row("Hit Sound", sound.enabled, 5,
                               [&]
                               {
                                   select_row("Sound", sound.style, hitsound_styles);
@@ -431,16 +431,17 @@ void draw_effects_tab()
                                           ui::bound_overlay().request_custom_hitsound(0);
                                       }
                                   }
-                                  toggle_popup_row(
-                                      "Floating Damage", sound.show_damage, 4,
-                                      [&]
-                                      {
-                                          color_row("Damage Color", sound.damage_color);
-                                          slider_row("Damage Size", sound.damage_size, 8.0f, 28.0f, "", 0.5f);
-                                          slider_row("Damage Duration", sound.damage_duration, 0.15f, 2.0f, "s", 0.05f);
-                                          slider_row("Damage Rise", sound.damage_rise, 0.0f, 100.0f, "px", 1.0f);
-                                      });
                               });
+
+             toggle_popup_row(
+                 "Floating Damage", sound.show_damage, 4,
+                 [&]
+                 {
+                     color_row("Damage Color", sound.damage_color);
+                     slider_row("Damage Size", sound.damage_size, 8.0f, 28.0f, "", 0.5f);
+                     slider_row("Damage Duration", sound.damage_duration, 0.15f, 2.0f, "s", 0.05f);
+                     slider_row("Damage Rise", sound.damage_rise, 0.0f, 100.0f, "px", 1.0f);
+                 });
 
              auto& kill_sound = general.m_kill_sound;
              toggle_popup_row("Kill Sound", kill_sound.enabled, 4,
@@ -512,12 +513,14 @@ void draw_crosshair_tab()
                                   slider_row("Gap", p.gap, 0.0f, 50.0f, "", 0.5f);
                               });
              slider_row("Thickness", p.thickness, 1.0f, 10.0f, "", 0.25f);
-             toggle_popup_row("Spread Circle", p.spread_circle_enabled, 3,
+             toggle_popup_row("Spread Circle", p.spread_circle_enabled, 5,
                               [&]
                               {
                                   color_row("Color", p.spread_circle_color);
                                   slider_row("Thickness", p.spread_circle_thickness, 0.5f, 5.0f, "", 0.25f);
                                   slider_row("Scale", p.spread_circle_scale, 1.0f, 200.0f, "", 1.0f);
+                                  slider_row("Min Size", p.spread_circle_min_size, 1.0f, 500.0f, "", 1.0f);
+                                  slider_row("Max Size", p.spread_circle_max_size, 1.0f, 500.0f, "", 1.0f);
                               });
          });
     card("crosshair_colors", "COLORS", 3,

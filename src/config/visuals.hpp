@@ -400,6 +400,8 @@ struct visual_profile
         foundation::rgba spread_circle_color{255, 0, 0, 120};
         float spread_circle_thickness{1.0f};
         float spread_circle_scale{20.0f};
+        float spread_circle_min_size{5.0f};
+        float spread_circle_max_size{200.0f};
     } m_crosshair{};
 
     struct chams

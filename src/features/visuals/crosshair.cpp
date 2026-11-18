@@ -134,9 +134,10 @@ void crosshair_t::on_render(render::draw::draw_list& draw_list)
             {
                 // inaccuracy/spread and fov are both in degrees; convert to radians for tan().
                 constexpr float k_deg_to_rad = 3.14159265358979323846f / 180.0f;
-                const auto screen_radius =
+                auto screen_radius =
                     (sw * 0.5f) * std::tan(cone_angle * k_deg_to_rad) / std::tan(fov * 0.5f * k_deg_to_rad) *
                     cfg.spread_circle_scale;
+                screen_radius = std::clamp(screen_radius, cfg.spread_circle_min_size, cfg.spread_circle_max_size);
                 if (screen_radius > 1.0f)
                 {
                     draw_list.add_circle(center_x, center_y, screen_radius, cfg.spread_circle_color, 32,
