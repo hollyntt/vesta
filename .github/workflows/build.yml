@@ -1,8 +1,9 @@
-name: Build
+name: Build & Release
 
 on:
   push:
     branches: [main]
+    tags: ["v*", "1.*"]
   pull_request:
   workflow_dispatch:
 
@@ -10,10 +11,27 @@ permissions:
   contents: read
 
 jobs:
-  windows:
+  build:
     runs-on: windows-2022
+    outputs:
+      target: ${{ steps.resolve.outputs.target }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Resolve target repository
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $repo = "${{ github.repository }}"
+          try {
+            $info = gh api --jq .parent.full_name "repos/$repo"
+            if ($info) { $repo = $info }
+          } catch {}
+          "target=$repo" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+      # Every third-party library is downloaded at configure time from its pinned upstream release.
       - name: Configure
         run: cmake --preset release
       - name: Build
@@ -24,3 +42,137 @@ jobs:
           name: vesta-windows-x64
           path: build/bin/vesta.exe
           if-no-files-found: error
+
+  pages:
+    needs: build
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && !startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Build static site
+        run: node website/build.mjs
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: website/dist
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: windows-2022
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Attest GitHub Actions build
+        uses: actions/attest@v4
+        with:
+          subject-path: build/bin/vesta.exe
+      - name: Publish immutable GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REPO: ${{ needs.build.outputs.target }}
+          TAG: ${{ github.ref_name }}
+        shell: pwsh
+        run: |
+          $tag = "$env:TAG"
+          $asset = "build/bin/vesta.exe"
+          $sha256 = (Get-FileHash $asset -Algorithm SHA256).Hash.ToLowerInvariant()
+
+          $repositoryUrl = "${{ github.server_url }}/$env:TARGET_REPO"
+          $runUrl = "$repositoryUrl/actions/runs/${{ github.run_id }}"
+          $verificationNotes = @(
+            "## Verified GitHub Actions build"
+            ""
+            "The attached vesta.exe was compiled from this tag by GitHub Actions. Its signed build provenance links the binary to this repository, workflow run, commit, and tag."
+            ""
+            "Build: [$($env:GITHUB_SHA.Substring(0, 7))]($repositoryUrl/commit/$env:GITHUB_SHA) · [GitHub Actions run]($runUrl)"
+            ""
+            "SHA-256: ``$sha256``"
+            ""
+            "Verify the downloaded binary with GitHub CLI:"
+            ""
+            '```powershell'
+            "gh attestation verify .\\vesta.exe --repo $env:TARGET_REPO"
+            '```'
+            ""
+            "License and third-party notices: [LICENSE]($repositoryUrl/blob/$tag/LICENSE) · [THIRD_PARTY_NOTICES.md]($repositoryUrl/blob/$tag/THIRD_PARTY_NOTICES.md)"
+          ) -join "`n"
+          $changeLogPath = ".github/release-notes/$tag.md"
+          if (-not (Test-Path -LiteralPath $changeLogPath)) {
+            $changeLogPath = ".github/release-notes/$($tag.TrimStart('v')).md"
+          }
+          if (Test-Path -LiteralPath $changeLogPath) {
+            $changeLog = (Get-Content -LiteralPath $changeLogPath -Raw).Trim()
+            $releaseNotes = "$changeLog`n`n$verificationNotes"
+          } else {
+            $releaseNotes = $verificationNotes
+          }
+          $releaseNotes | Set-Content -Encoding utf8 RELEASE_NOTES.md
+
+          $releaseJson = gh release view $tag --json isDraft,assets `
+            --repo "$env:TARGET_REPO" 2>$null
+          $exists = $LASTEXITCODE -eq 0
+          if ($exists) {
+            $release = $releaseJson | ConvertFrom-Json
+            if (-not $release.isDraft) {
+              throw "Release $tag already exists and is published. Immutable releases cannot be replaced."
+            }
+            $stale = @($release.assets | Where-Object { $_.name -ne "vesta.exe" } | ForEach-Object { $_.name })
+            foreach ($name in $stale) {
+              gh release delete-asset $tag $name --yes --repo "$env:TARGET_REPO"
+              if ($LASTEXITCODE -ne 0) { throw "Failed to remove stale asset $name." }
+            }
+            gh release upload $tag $asset --clobber --repo "$env:TARGET_REPO"
+            if ($LASTEXITCODE -ne 0) { throw "Failed to upload vesta.exe." }
+            gh release edit $tag --notes-file RELEASE_NOTES.md --repo "$env:TARGET_REPO"
+            if ($LASTEXITCODE -ne 0) { throw "Failed to update release notes." }
+          } else {
+            gh release create $tag `
+              --verify-tag `
+              --draft `
+              --title "Vesta $tag" `
+              --notes-file RELEASE_NOTES.md `
+              --repo "$env:TARGET_REPO" `
+              $asset
+            if ($LASTEXITCODE -ne 0) { throw "Failed to create draft release." }
+
+            $draft = gh release view $tag --json assets,isDraft `
+              --repo "$env:TARGET_REPO" | ConvertFrom-Json
+            $actualAssets = @($draft.assets | ForEach-Object { $_.name })
+            if (-not $draft.isDraft -or $actualAssets.Count -ne 1 -or $actualAssets[0] -ne "vesta.exe") {
+              throw "Draft validation failed. Assets: $($actualAssets -join ', ')"
+            }
+          }
+
+          gh release edit $tag --draft=false --repo "$env:TARGET_REPO"
+          if ($LASTEXITCODE -ne 0) { throw "Failed to publish immutable release." }
+
+          $published = gh api `
+            -H "X-GitHub-Api-Version: 2026-03-10" `
+            --repo "$env:TARGET_REPO" `
+            "repos/$env:TARGET_REPO/releases/tags/$tag" `
+            | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or -not $published.immutable) {
+            throw "GitHub published $tag without immutable protection."
+          }
+
+          Write-Host "Released $tag to $env:TARGET_REPO as immutable"
