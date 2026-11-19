@@ -7,31 +7,13 @@ on:
   pull_request:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   build:
     runs-on: windows-2022
-    outputs:
-      target: ${{ steps.resolve.outputs.target }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Resolve target repository
-        id: resolve
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: pwsh
-        run: |
-          $repo = "${{ github.repository }}"
-          try {
-            $info = gh api --jq .parent.full_name "repos/$repo"
-            if ($info) { $repo = $info }
-          } catch {}
-          "target=$repo" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
-      # Every third-party library is downloaded at configure time from its pinned upstream release.
       - name: Configure
         run: cmake --preset release
       - name: Build
@@ -43,36 +25,10 @@ jobs:
           path: build/bin/vesta.exe
           if-no-files-found: error
 
-  pages:
-    needs: build
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && !startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    concurrency:
-      group: pages
-      cancel-in-progress: true
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-      - name: Build static site
-        run: node website/build.mjs
-      - uses: actions/configure-pages@v6
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: website/dist
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v5
-
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
     runs-on: windows-2022
+    if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
       id-token: write
@@ -89,7 +45,6 @@ jobs:
       - name: Publish immutable GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          TARGET_REPO: ${{ needs.build.outputs.target }}
           TAG: ${{ github.ref_name }}
         shell: pwsh
         run: |
@@ -97,7 +52,7 @@ jobs:
           $asset = "build/bin/vesta.exe"
           $sha256 = (Get-FileHash $asset -Algorithm SHA256).Hash.ToLowerInvariant()
 
-          $repositoryUrl = "${{ github.server_url }}/$env:TARGET_REPO"
+          $repositoryUrl = "${{ github.server_url }}/${{ github.repository }}"
           $runUrl = "$repositoryUrl/actions/runs/${{ github.run_id }}"
           $verificationNotes = @(
             "## Verified GitHub Actions build"
@@ -111,7 +66,7 @@ jobs:
             "Verify the downloaded binary with GitHub CLI:"
             ""
             '```powershell'
-            "gh attestation verify .\\vesta.exe --repo $env:TARGET_REPO"
+            "gh attestation verify .\\vesta.exe --repo ${{ github.repository }}"
             '```'
             ""
             "License and third-party notices: [LICENSE]($repositoryUrl/blob/$tag/LICENSE) · [THIRD_PARTY_NOTICES.md]($repositoryUrl/blob/$tag/THIRD_PARTY_NOTICES.md)"
@@ -128,8 +83,7 @@ jobs:
           }
           $releaseNotes | Set-Content -Encoding utf8 RELEASE_NOTES.md
 
-          $releaseJson = gh release view $tag --json isDraft,assets `
-            --repo "$env:TARGET_REPO" 2>$null
+          $releaseJson = gh release view $tag --json isDraft,assets,tagName 2>$null
           $exists = $LASTEXITCODE -eq 0
           if ($exists) {
             $release = $releaseJson | ConvertFrom-Json
@@ -138,12 +92,12 @@ jobs:
             }
             $stale = @($release.assets | Where-Object { $_.name -ne "vesta.exe" } | ForEach-Object { $_.name })
             foreach ($name in $stale) {
-              gh release delete-asset $tag $name --yes --repo "$env:TARGET_REPO"
+              gh release delete-asset $tag $name --yes
               if ($LASTEXITCODE -ne 0) { throw "Failed to remove stale asset $name." }
             }
-            gh release upload $tag $asset --clobber --repo "$env:TARGET_REPO"
+            gh release upload $tag $asset --clobber
             if ($LASTEXITCODE -ne 0) { throw "Failed to upload vesta.exe." }
-            gh release edit $tag --notes-file RELEASE_NOTES.md --repo "$env:TARGET_REPO"
+            gh release edit $tag --notes-file RELEASE_NOTES.md
             if ($LASTEXITCODE -ne 0) { throw "Failed to update release notes." }
           } else {
             gh release create $tag `
@@ -151,28 +105,25 @@ jobs:
               --draft `
               --title "Vesta $tag" `
               --notes-file RELEASE_NOTES.md `
-              --repo "$env:TARGET_REPO" `
               $asset
             if ($LASTEXITCODE -ne 0) { throw "Failed to create draft release." }
 
-            $draft = gh release view $tag --json assets,isDraft `
-              --repo "$env:TARGET_REPO" | ConvertFrom-Json
+            $draft = gh release view $tag --json assets,isDraft | ConvertFrom-Json
             $actualAssets = @($draft.assets | ForEach-Object { $_.name })
             if (-not $draft.isDraft -or $actualAssets.Count -ne 1 -or $actualAssets[0] -ne "vesta.exe") {
               throw "Draft validation failed. Assets: $($actualAssets -join ', ')"
             }
           }
 
-          gh release edit $tag --draft=false --repo "$env:TARGET_REPO"
+          gh release edit $tag --draft=false
           if ($LASTEXITCODE -ne 0) { throw "Failed to publish immutable release." }
 
           $published = gh api `
             -H "X-GitHub-Api-Version: 2026-03-10" `
-            --repo "$env:TARGET_REPO" `
-            "repos/$env:TARGET_REPO/releases/tags/$tag" `
+            "repos/${{ github.repository }}/releases/tags/$tag" `
             | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0 -or -not $published.immutable) {
             throw "GitHub published $tag without immutable protection."
           }
 
-          Write-Host "Released $tag to $env:TARGET_REPO as immutable"
+          Write-Host "Released $tag as immutable to ${{ github.repository }}"
