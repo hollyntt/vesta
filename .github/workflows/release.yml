@@ -15,6 +15,8 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       # Every third-party library is downloaded at configure time from its pinned upstream release.
       - name: Configure
         run: cmake --preset release
@@ -54,6 +56,9 @@ jobs:
             "License and third-party notices: [LICENSE]($repositoryUrl/blob/$tag/LICENSE) · [THIRD_PARTY_NOTICES.md]($repositoryUrl/blob/$tag/THIRD_PARTY_NOTICES.md)"
           ) -join "`n"
           $changeLogPath = ".github/release-notes/$tag.md"
+          if (-not (Test-Path -LiteralPath $changeLogPath)) {
+            $changeLogPath = ".github/release-notes/$($tag.TrimStart('v')).md"
+          }
           if (Test-Path -LiteralPath $changeLogPath) {
             $changeLog = (Get-Content -LiteralPath $changeLogPath -Raw).Trim()
             $releaseNotes = "$changeLog`n`n$verificationNotes"
