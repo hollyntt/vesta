@@ -1,21 +1,20 @@
-name: Release
+name: Build & Release
 
 on:
   push:
+    branches: [main]
     tags: ["v*", "1.*"]
+  pull_request:
+  workflow_dispatch:
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
-  artifact-metadata: write
+  contents: read
 
 jobs:
-  release:
+  build:
     runs-on: windows-2022
     outputs:
       target: ${{ steps.resolve.outputs.target }}
-      existing: ${{ steps.check.outputs.existing }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -37,6 +36,40 @@ jobs:
         run: cmake --preset release
       - name: Build
         run: cmake --build --preset release --parallel
+      - name: Upload executable
+        uses: actions/upload-artifact@v7
+        with:
+          name: vesta-windows-x64
+          path: build/bin/vesta.exe
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: windows-2022
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    outputs:
+      existing: ${{ steps.check.outputs.existing }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Resolve target repository
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $repo = "${{ github.repository }}"
+          try {
+            $info = gh api --jq .parent.full_name "repos/$repo"
+            if ($info) { $repo = $info }
+          } catch {}
+          "target=$repo" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
       - name: Attest GitHub Actions build
         uses: actions/attest@v4
         with:
@@ -47,8 +80,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          $releaseJson = gh release view "${{ github.ref_name }}" \
-            --repo "${{ steps.resolve.outputs.target }}" \
+          $releaseJson = gh release view "${{ github.ref_name }}" `
+            --repo "${{ steps.resolve.outputs.target }}" `
             --json isDraft 2>$null
           "existing=$($LASTEXITCODE -eq 0)" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
       - name: Publish immutable GitHub release
@@ -121,25 +154,21 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or -not $published.immutable) {
             throw "GitHub published $tag without immutable protection."
           }
-          echo "tag=$tag" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
-          echo "tag=$tag" >> $env:GITHUB_ENV
-          echo "target=$env:TARGET_REPO" >> $env:GITHUB_ENV
       - name: Verify release exists
-        if: steps.check.outputs.existing == 'true' || steps.publish.outputs.tag != ''
+        if: steps.check.outputs.existing == 'true' || !cancelled()
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_REPO: ${{ steps.resolve.outputs.target }}
-          RELEASE_TAG: ${{ steps.publish.outputs.tag }}
         shell: pwsh
         run: |
-          $verifiedTag = "${{ env.RELEASE_TAG }}"
+          $tag = "${{ github.ref_name }}"
           $exists = $false
           try {
-            $check = gh release view $verifiedTag --json tagName --repo "${{ env.TARGET_REPO }}" 2>$null
-            if ($LASTEXITCODE -eq 0) { $exists = $check | ConvertFrom-Json | ForEach-Object { $_.tagName -eq $verifiedTag } }
+            $check = gh release view $tag --json tagName --repo "${{ env.TARGET_REPO }}" 2>$null
+            if ($LASTEXITCODE -eq 0) { $exists = $check | ConvertFrom-Json | ForEach-Object { $_.tagName -eq $tag } }
           } catch {}
-          if (-not $exists) { throw "Release $verifiedTag does not exist in ${{ env.TARGET_REPO }} after publishing." }
-          Write-Host "Verified release '$verifiedTag' in ${{ env.TARGET_REPO }}"
+          if (-not $exists) { throw "Release $tag not found in ${{ env.TARGET_REPO }} after publishing." }
+          Write-Host "Verified release '$tag' in ${{ env.TARGET_REPO }}"
       - name: Update existing release
         if: steps.check.outputs.existing == 'true'
         env:
