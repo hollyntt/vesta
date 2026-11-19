@@ -130,6 +130,7 @@ set(vesta_sources
     src/features/visuals/sound.cpp
     src/features/misc/auto_accept.cpp
 	 src/features/misc/auto_stop.cpp
+       src/features/misc/auto_peek.cpp
     src/features/misc/bhop.cpp
     src/features/misc/angle_placement.cpp
     src/features/misc/nade_helper.cpp

@@ -2091,6 +2091,27 @@ static void from_json(const json& j, general_profile::edge_jump& e)
         j.at("key").get_to(e.activation_key);
 }
 
+static void to_json(json& j, const general_profile::auto_peek& p)
+{
+    j = json{{"enabled", p.enabled},
+             {"require_firing", p.require_firing},
+             {"hold", p.hold},
+             {"record_speed", p.record_speed},
+             {"peek_distance", p.peek_distance}};
+}
+
+static void from_json(const json& j, general_profile::auto_peek& p)
+{
+    read_field(j, "enabled", p.enabled);
+    read_field(j, "require_firing", p.require_firing);
+    read_field(j, "hold", p.hold);
+    read_field(j, "record_speed", p.record_speed);
+    read_field(j, "peek_distance", p.peek_distance);
+    p.hold = std::clamp(p.hold, 0.0f, 100.0f);
+    p.record_speed = std::clamp(p.record_speed, 0.0f, 100.0f);
+    p.peek_distance = std::clamp(p.peek_distance, 0.0f, 2000.0f);
+}
+
 static void to_json(json& j, const game_controls& b)
 {
     j = json{{"forward", b.forward}, {"back", b.back}, {"left", b.left},     {"right", b.right},
@@ -2237,6 +2258,7 @@ static void to_json(json& j, const general_profile& m)
              {"m_game_controls", m.m_game_controls},
              {"m_auto_stop", m.m_auto_stop},
              {"m_autofire", m.m_autofire},
+             {"m_auto_peek", m.m_auto_peek},
              {"m_walk_bot", m.m_walk_bot},
              {"language", m.language},
              {"menu_scale", m.menu_scale},
@@ -2283,6 +2305,7 @@ static void from_json(const json& j, general_profile& m)
     read_field(j, "m_game_controls", m.m_game_controls);
     read_field(j, "m_auto_stop", m.m_auto_stop);
     read_field(j, "m_autofire", m.m_autofire);
+    read_field(j, "m_auto_peek", m.m_auto_peek);
     read_field(j, "m_walk_bot", m.m_walk_bot);
     read_field(j, "language", m.language);
     m.language = std::clamp(m.language, 0, general_profile::k_language_count - 1);

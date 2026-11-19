@@ -44,7 +44,11 @@ void aimbot_t::recoil_control(const config::combat_profile::aimbot& cfg, bool de
         m_rcs_weapon = weapon;
     }
 
-    if (!weapon_ctx.valid || weapon_ctx.weapon != weapon || !weapon_ctx.is_full_auto)
+    // RCS corrects full-auto bursts out of the box. Semi-auto weapons only get it while a trigger
+    // owns the attack (triggerbot/autofire holding it): the game still auto-fires a held semi-auto
+    // at its rate, so the punch keeps accumulating and is worth correcting too.
+    if (!weapon_ctx.valid || weapon_ctx.weapon != weapon ||
+        (!weapon_ctx.is_full_auto && !m_trigger_held && !m_autofire_held))
     {
         clear_correction(true);
         return;

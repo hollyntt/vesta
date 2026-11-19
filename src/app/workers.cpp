@@ -16,6 +16,7 @@
 #include <features/aimbot/aimbot.hpp>
 #include <features/misc/misc.hpp>
 #include <features/misc/auto_stop.hpp>
+#include <features/misc/auto_peek.hpp>
 #include <features/misc/walk_bot.hpp>
 #include <features/misc/match_flow.hpp>
 #include <features/trigger/seed_trigger.hpp>
@@ -421,13 +422,17 @@ void movement(control control)
                 VESTA_PERF_SCOPE(auto_stop_tick);
                 features::misc::auto_stop().tick();
             }
+            {
+                VESTA_PERF_SCOPE(auto_peek_tick);
+                features::misc::auto_peek().tick();
+            }
             features::misc::walk_bot().tick();
         }
         const auto snapshot = config::get_runtime_snapshot();
         const auto active =
             snapshot && (snapshot->general.m_bunny_hop.enabled || snapshot->general.m_edge_jump.enabled ||
                          snapshot->general.m_auto_stop.enabled || snapshot->general.m_walk_bot.enabled ||
-                         features::misc::auto_stop().active());
+                         snapshot->general.m_auto_peek.enabled || features::misc::auto_stop().active());
         control.sleep_for(active ? active_interval : idle_interval);
     }
 }

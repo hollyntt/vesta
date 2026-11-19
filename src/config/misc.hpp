@@ -219,6 +219,17 @@ struct general_profile
         int activation_key{VK_XBUTTON1};
     } m_edge_jump{};
 
+    // Auto Peek: while the player slides/peeks (moving and firing), keep the crosshair anchored to the
+    // world point they were pre-aimed at while standing still, so the aim does not drift off as they move.
+    struct auto_peek
+    {
+        bool enabled{false};
+        bool require_firing{true};   // only steer while the trigger is held (like the reference auto_peek)
+        float hold{70.0f};           // 0-100: how snappily the view is held on the anchor
+        float record_speed{20.0f};   // 2D speed (u/s) below which the spot counts as "still" and (re)records
+        float peek_distance{250.0f}; // how far ahead of the player the anchor point sits (u)
+    } m_auto_peek{};
+
         // Visual-only wall-distance and lateral-position overlay. This does not
         // use enemy data and cannot modify movement, view angles or firing.
         struct angle_placement_helper

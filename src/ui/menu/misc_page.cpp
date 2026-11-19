@@ -299,7 +299,7 @@ void draw_grenades_tab()
 void draw_movement_tab()
 {
     auto& p = config::general_settings;
-    card("movement", "MOVEMENT", 3,
+    card("movement", "MOVEMENT", 4,
          [&]
          {
              toggle_popup_row("Angle Placement", p.m_angle_placement.enabled, 6,
@@ -322,6 +322,14 @@ void draw_movement_tab()
                               });
              toggle_popup_row("Enable Edge Jump", p.m_edge_jump.enabled, 1,
                               [&] { keybind_row("Activation Key", p.m_edge_jump.activation_key); });
+             toggle_popup_row("Auto Peek", p.m_auto_peek.enabled, 4,
+                              [&]
+                              {
+                                  toggle_row("Require Firing", p.m_auto_peek.require_firing);
+                                  slider_row("Hold Strength", p.m_auto_peek.hold, 1.0f, 100.0f, "%", 1.0f);
+                                  slider_row("Re-arm Speed", p.m_auto_peek.record_speed, 0.0f, 100.0f, " u/s", 1.0f);
+                                  slider_row("Peek Distance", p.m_auto_peek.peek_distance, 0.0f, 2000.0f, " u", 10.0f);
+                              });
          });
 }
 
