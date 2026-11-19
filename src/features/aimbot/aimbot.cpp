@@ -21,7 +21,7 @@ void aimbot_t::reset()
         {
             platform::windows::bound_input().key(VK_F24, false);
         }
-        else
+            else
         {
             released = platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_up);
         }
@@ -30,6 +30,7 @@ void aimbot_t::reset()
             m_trigger_held = false;
     }
     m_trigger_press_shots = -1;
+    m_autofire_held = false;
     m_seed_press_active = false;
     m_seed_held_secondary = false;
     m_seed_held_proxy = false;
@@ -467,7 +468,7 @@ void aimbot_t::tick()
         return;
 
     // Standalone autofire: hold attack whenever a visible target passes the checks.
-        // Run autofire BEFORE the early return for clip == 0 so it can handle reload logic
+        bool autofire_held_attack = false;
     if (runtime_config()->general.m_autofire.enabled &&
         config::combat_profile::activation_active(runtime_config()->general.m_autofire.activation_mode,
                                                    runtime_config()->general.m_autofire.key))
@@ -475,35 +476,42 @@ void aimbot_t::tick()
         // Local player checks (airborne, flashed, etc.)
         if (local_checks_blocked(runtime_config()->general.m_autofire.checks))
         {
+                features::misc::auto_stop().cancel_request(features::misc::auto_stop_source::advanced_trigger);
             platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_up);
+            m_autofire_held = false;
             flush_recoil_input();
-            return;
+                // Don't return - let triggerbot handle checks too
         }
-
-        // Check if there's any valid target visible and in crosshair
-        if (!frame.targets->empty())
+            else
         {
-            const auto eye = frame.eye;
-            const auto& view_angles = frame.view_angles;
-            
-            // Build triggerbot config for hitbox detection
-            config::combat_profile::triggerbot tb_cfg;
-            tb_cfg.activation_mode = config::combat_profile::activation::always;
-            tb_cfg.hitbox_parts = runtime_config()->general.m_autofire.hitbox_parts;
-            tb_cfg.checks = runtime_config()->general.m_autofire.checks;
-            tb_cfg.checks.walls = runtime_config()->general.m_autofire.autowall 
-                ? config::combat_profile::wall_policy::penetration 
-                : config::combat_profile::wall_policy::block;
-            
-            // Use triggerbot's trace_direction to check if target is in crosshair
-            foundation::vec3 forward{};
-            view_angles.to_directions(&forward, nullptr, nullptr);
-            const auto result = trace_direction(eye, forward, *frame.targets, tb_cfg);
-            
+                bool target_found = false;
+
+                // Check if there's any valid target visible and in crosshair
+                if (!frame.targets->empty())
+                {
+                    const auto eye = frame.eye;
+                    const auto& view_angles = frame.view_angles;
+
+                    // Build triggerbot config for hitbox detection
+                    config::combat_profile::triggerbot tb_cfg;
+                    tb_cfg.activation_mode = config::combat_profile::activation::always;
+                    tb_cfg.hitbox_parts = runtime_config()->general.m_autofire.hitbox_parts;
+                    tb_cfg.checks = runtime_config()->general.m_autofire.checks;
+                    tb_cfg.checks.walls = runtime_config()->general.m_autofire.autowall
+                        ? config::combat_profile::wall_policy::penetration
+                        : config::combat_profile::wall_policy::block;
+
+                    // Use triggerbot's trace_direction to check if target is in crosshair
+                    foundation::vec3 forward{};
+                    view_angles.to_directions(&forward, nullptr, nullptr);
+                    const auto result = trace_direction(eye, forward, *frame.targets, tb_cfg);
+
+                target_found = result.player != nullptr;
+
                 // Auto-reload when out of ammo
                 const auto auto_reload = runtime_config()->general.m_autofire.auto_reload;
                 const bool need_reload = auto_reload && (ctx.clip == 0 || ctx.is_reloading);
-            
+
                 if (need_reload && !ctx.is_reloading)
                 {
                     // Press reload key
@@ -511,24 +519,72 @@ void aimbot_t::tick()
                     platform::windows::bound_input().key(reload_key, true);
                     platform::windows::bound_input().key(reload_key, false);
                 }
-            
-                // Hold attack if we found a valid target in crosshair and have ammo
-                if (result.player && ctx.clip > 0 && !ctx.is_reloading)
+            }
+
+            if (target_found && ctx.clip > 0 && !ctx.is_reloading)
             {
+                // Autostop: stop moving when firing if enabled
+                if (runtime_config()->general.m_autofire.autostop)
+                {
+                    // Calculate required speed based on weapon max speed and autofire's required_shoot_speed percentage
+                    const auto weapon_max_speed = ctx.fire_mode ? ctx.debug.max_speed.second : ctx.debug.max_speed.first;
+                    const auto required_speed = std::max(0.5f,
+                        (std::isfinite(weapon_max_speed) && weapon_max_speed > 0.0f ? weapon_max_speed : 250.0f) *
+                        runtime_config()->general.m_autofire.required_shoot_speed * 0.01f);
+
+
+                    // Request autostop braking. The request must stay alive across ticks so the
+                    // movement worker can actually brake - do NOT cancel it on a failed ready check.
+                    features::misc::auto_stop().request_stop(features::misc::auto_stop_source::advanced_trigger,
+                                                             std::chrono::steady_clock::now(),
+                                                             required_speed);
+
+                    // RCS for autofire is handled by the top-level recoil_control call in tick();
+                    // m_autofire_held (set when the attack is held below) is what keeps that gate open.
+
+                    // Wait for autostop braking to complete BEFORE pressing attack.
+                    // On failure: release attack and bail, leaving the request active for the worker.
+                    if (!features::misc::auto_stop().ready_to_fire(features::misc::auto_stop_source::advanced_trigger))
+                    {
+                        platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_up);
+                        return;
+                    }
+                }
+
+                // Hold attack if we found a valid target in crosshair and have ammo
                 platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_down);
+                autofire_held_attack = true;
+                // The top-level per-tick recoil_control call corrects the burst; this flag keeps
+                // its attack-ownership gate open while autofire owns the trigger.
+                m_autofire_held = true;
+
+                // Notify auto_stop that the shot was delivered (like triggerbot does)
+                if (runtime_config()->general.m_autofire.autostop)
+                {
+                    features::misc::auto_stop().notify_shot(features::misc::auto_stop_source::advanced_trigger);
+                }
             }
             else
             {
+                features::misc::auto_stop().cancel_request(features::misc::auto_stop_source::advanced_trigger);
                 platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_up);
+                m_autofire_held = false;
             }
         }
-        else
-        {
-            platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_up);
-        }
-        flush_recoil_input();
-        return;
     }
+    else
+    {
+        // Cancel autostop when autofire is disabled
+        features::misc::auto_stop().cancel_request(features::misc::auto_stop_source::advanced_trigger);
+        if (m_autofire_held)
+            platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_up);
+        m_autofire_held = false;
+    }
+
+        // Run triggerbot independently (walk_autofire or triggerbot key)
+        if ((cfg.triggerbot.enabled || walk_autofire) &&
+            cfg.triggerbot.seed_type == config::combat_profile::seed_mode::none)
+            triggerbot(frame.eye, frame.view_angles, *frame.targets, cfg.triggerbot);
 
         if (ctx.is_reloading || ctx.clip == 0)
         {
@@ -537,25 +593,8 @@ void aimbot_t::tick()
             return;
         }
 
-    if ((cfg.triggerbot.enabled || walk_autofire) &&
-        cfg.triggerbot.seed_type == config::combat_profile::seed_mode::none)
-        triggerbot(frame.eye, frame.view_angles, *frame.targets, cfg.triggerbot);
-
     if (m_trigger_held)
         note_view_engaged(m_trigger_target_valid ? m_trigger_target.pawn : 0);
-    
-        // Run RCS for autofire if enabled
-        if (runtime_config()->general.m_autofire.enabled &&
-            config::combat_profile::activation_active(runtime_config()->general.m_autofire.activation_mode,
-                                                       runtime_config()->general.m_autofire.key) &&
-            runtime_config()->general.m_autofire.rcs.enabled)
-        {
-            // Create a temporary aimbot config with autofire's RCS settings
-            auto temp_aimbot_cfg = cfg.aimbot;
-            temp_aimbot_cfg.rcs = runtime_config()->general.m_autofire.rcs;
-            recoil_control(temp_aimbot_cfg, true);
-        }
-    
     if (cfg.aimbot.enabled && !m_trigger_held)
     {
         if (!config::combat_profile::activation_active(cfg.aimbot.activation_mode, cfg.aimbot.key))
@@ -568,6 +607,5 @@ void aimbot_t::tick()
     }
     flush_recoil_input();
 }
-
 
 } // namespace features::aimbot

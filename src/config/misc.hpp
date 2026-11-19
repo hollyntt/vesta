@@ -330,7 +330,18 @@ struct general_profile
         float min_damage{30.0f};
         bool visible_only{true};
         bool auto_reload{true};
-            config::combat_profile::rcs_settings rcs{};
+        bool autostop{false};
+        // Autostop settings (match triggerbot's advanced_trigger)
+        float stop_speed{8.0f};
+        float required_shoot_speed{34.0f};
+        // Shot timing settings
+        int delay{10};
+        int randomize_ms{5};
+        float outlier_chance{3.0f};
+        int outlier_delay_ms{20};
+        int delay_after_ms{100};
+        bool checks_spread{false};
+        bool no_spread{false};
         config::combat_profile::legit_checks checks{
             .airborne = true, .flashed = true, .smoke = true, .flash_threshold = 85.0f,
             .walls = config::combat_profile::wall_policy::penetration};

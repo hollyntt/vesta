@@ -2147,14 +2147,16 @@ static void to_json(json& j, const general_profile::autofire& af)
              {"min_damage", af.min_damage},
              {"visible_only", af.visible_only},
              {"auto_reload", af.auto_reload},
-             {"rcs", {{"enabled", af.rcs.enabled},
-                      {"start_bullet", af.rcs.start_bullet},
-                      {"pitch", af.rcs.pitch},
-                      {"yaw", af.rcs.yaw},
-                      {"response_ms", af.rcs.response_ms},
-                      {"smoothness", af.rcs.smoothness},
-                      {"randomness", af.rcs.randomness},
-                      {"drift", af.rcs.drift}}},
+             {"autostop", af.autostop},
+             {"stop_speed", af.stop_speed},
+             {"required_shoot_speed", af.required_shoot_speed},
+             {"delay", af.delay},
+             {"randomize_ms", af.randomize_ms},
+             {"outlier_chance", af.outlier_chance},
+             {"outlier_delay_ms", af.outlier_delay_ms},
+             {"delay_after_ms", af.delay_after_ms},
+             {"no_spread", af.no_spread},
+             {"checks_spread", af.checks_spread},
              {"checks", {{"airborne", af.checks.airborne},
                          {"flashed", af.checks.flashed},
                          {"smoke", af.checks.smoke},
@@ -2172,18 +2174,16 @@ static void from_json(const json& j, general_profile::autofire& af)
     read_field(j, "min_damage", af.min_damage);
     read_field(j, "visible_only", af.visible_only);
     read_field(j, "auto_reload", af.auto_reload);
-    if (j.contains("rcs"))
-    {
-        const auto& r = j.at("rcs");
-        read_field(r, "enabled", af.rcs.enabled);
-        read_field(r, "start_bullet", af.rcs.start_bullet);
-        read_field(r, "pitch", af.rcs.pitch);
-        read_field(r, "yaw", af.rcs.yaw);
-        read_field(r, "response_ms", af.rcs.response_ms);
-        read_field(r, "smoothness", af.rcs.smoothness);
-        read_field(r, "randomness", af.rcs.randomness);
-        read_field(r, "drift", af.rcs.drift);
-    }
+    read_field(j, "autostop", af.autostop);
+    read_field(j, "stop_speed", af.stop_speed);
+    read_field(j, "required_shoot_speed", af.required_shoot_speed);
+    read_field(j, "delay", af.delay);
+    read_field(j, "randomize_ms", af.randomize_ms);
+    read_field(j, "outlier_chance", af.outlier_chance);
+    read_field(j, "outlier_delay_ms", af.outlier_delay_ms);
+    read_field(j, "delay_after_ms", af.delay_after_ms);
+    read_field(j, "no_spread", af.no_spread);
+    read_field(j, "checks_spread", af.checks_spread);
     if (j.contains("checks"))
     {
         const auto& c = j.at("checks");
@@ -2195,6 +2195,8 @@ static void from_json(const json& j, general_profile::autofire& af)
     }
     af.activation_mode = std::clamp(af.activation_mode, 0, 2);
     af.min_damage = std::clamp(af.min_damage, 1.0f, 500.0f);
+    af.stop_speed = std::clamp(af.stop_speed, 0.0f, 150.0f);
+    af.required_shoot_speed = std::clamp(af.required_shoot_speed, 0.0f, 60.0f);
     af.checks.flash_threshold = std::clamp(af.checks.flash_threshold, 0.0f, 255.0f);
 }
 

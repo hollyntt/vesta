@@ -109,7 +109,7 @@ void draw_general_tab()
                {
                    toggle_row("Auto Accept Match", p.auto_accept);
                        auto& af = p.m_autofire;
-                        toggle_popup_row("Autofire", af.enabled, 9, [&] {
+                        toggle_popup_row("Autofire", af.enabled, 10, [&] {
                         ui::menu::combat::master_row(af.enabled, af.activation_mode);
                            if (af.activation_mode != config::combat_profile::activation::always)
                            keybind_row("Key", af.key);
@@ -119,7 +119,15 @@ void draw_general_tab()
                            slider_row("Min Damage", af.min_damage, 1.0f, 500.0f, " HP", 1.0f);
                            toggle_row("Autowall", af.autowall);
                            toggle_row("Auto Reload", af.auto_reload);
-                                                   ui::menu::combat::rcs_row(af.rcs);
+                           toggle_popup_row(
+                               "Autostop", af.autostop, 3,
+                               [&]
+                               {
+                                   slider_row("Stop Speed", af.stop_speed, 0.0f, 150.0f, " u/s", 1.0f);
+                                   slider_row("Shoot Speed", af.required_shoot_speed, 0.0f, 60.0f, "%", 1.0f);
+                                   ui::menu::combat::trigger_timing_row(af.delay, af.randomize_ms, af.outlier_chance, af.outlier_delay_ms, af.delay_after_ms);
+                               });
+                           toggle_row("No Spread", af.no_spread);
                         });
                });
     // The game's own binds: what the features press (movement, attack, use, reload, buy menu) has to match them.

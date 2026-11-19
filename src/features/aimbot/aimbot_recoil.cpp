@@ -71,7 +71,8 @@ void aimbot_t::recoil_control(const config::combat_profile::aimbot& cfg, bool de
 
     const auto physical_attack =
         game::physical_action_down(game::input_action::attack, platform::windows::bound_input());
-    const auto attack_owned_by_trigger = m_trigger_held && !m_seed_held_secondary && !m_seed_held_proxy;
+        const auto attack_owned_by_trigger =
+            (m_trigger_held || m_autofire_held) && !m_seed_held_secondary && !m_seed_held_proxy;
     if (!physical_attack && !attack_owned_by_trigger)
     {
         clear_correction(false);
