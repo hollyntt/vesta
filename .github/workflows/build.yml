@@ -43,6 +43,11 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - name: Download executable artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: vesta-windows-x64
+          path: build/bin
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,7 +55,6 @@ jobs:
         run: |
           $tag = "$env:TAG"
           $asset = "build/bin/vesta.exe"
-          $sha256 = (Get-FileHash $asset -Algorithm SHA256).Hash.ToLowerInvariant()
           
           $existing = gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
