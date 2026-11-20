@@ -58,14 +58,8 @@ jobs:
             gh release upload $tag $asset --clobber
           } else {
             Write-Host "Creating new release $tag..."
-            $notes = @"
-## Auto Release $tag
-
-**Commit:** $env:GITHUB_SHA
-**SHA-256:** $sha256
-
-[GitHub Actions Run]($env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID)
-"@
+            $ghUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            $notes = "## Auto Release $tag`n`nCommit: $env:GITHUB_SHA`nSHA-256: $sha256`n`nAction Run: $ghUrl"
             gh release create $tag --title $tag --notes $notes $asset
           }
           Write-Host "Released $tag successfully"
