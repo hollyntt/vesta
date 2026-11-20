@@ -32,16 +32,11 @@ jobs:
     permissions:
       contents: write
       id-token: write
-      attestations: write
       artifact-metadata: write
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Attest GitHub Actions build
-        uses: actions/attest@v4
-        with:
-          subject-path: build/bin/vesta.exe
       - name: Publish immutable GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
