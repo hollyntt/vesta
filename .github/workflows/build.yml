@@ -55,6 +55,7 @@ jobs:
         run: |
           $tag = "$env:TAG"
           $asset = "build/bin/vesta.exe"
+          $sha256 = (Get-FileHash $asset -Algorithm SHA256).Hash.ToLowerInvariant()
           
           $existing = gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
