@@ -58,7 +58,7 @@ jobs:
             ""
             "The attached vesta.exe was compiled from this tag by GitHub Actions. Its signed build provenance links the binary to this repository, workflow run, commit, and tag."
             ""
-            "Build: [$($env:GITHUB_SHA.Substring(0, 7))]($repositoryUrl/commit/$env:GITHUB_SHA) · [GitHub Actions run]($runUrl)"
+            "Build: [$($env:GITHUB_SHA.Substring(0, 7))]($repositoryUrl/commit/$env:GITHUB_SHA) . [GitHub Actions run]($runUrl)"
             ""
             "SHA-256: ``$sha256``"
             ""
@@ -68,7 +68,7 @@ jobs:
             "gh attestation verify .\\vesta.exe --repo ${{ github.repository }}"
             '```'
             ""
-            "License and third-party notices: [LICENSE]($repositoryUrl/blob/$tag/LICENSE) · [THIRD_PARTY_NOTICES.md]($repositoryUrl/blob/$tag/THIRD_PARTY_NOTICES.md)"
+            "License and third-party notices: [LICENSE]($repositoryUrl/blob/$tag/LICENSE) . [THIRD_PARTY_NOTICES.md]($repositoryUrl/blob/$tag/THIRD_PARTY_NOTICES.md)"
           ) -join "`n"
           $changeLogPath = ".github/release-notes/$tag.md"
           if (-not (Test-Path -LiteralPath $changeLogPath)) {
