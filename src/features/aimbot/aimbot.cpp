@@ -41,6 +41,7 @@ void aimbot_t::reset()
     m_trigger_fire_time = {};
     m_trigger_cooldown_until = {};
     m_trigger_target_valid = false;
+    m_autofire_cooldown_until = {};
     m_seed_last_shots = -1;
     m_seed_pending_target_tick = -1;
     m_seed_pending_time = {};
@@ -540,8 +541,15 @@ void aimbot_t::tick()
 
             if (target_found && ctx.clip > 0 && !ctx.is_reloading)
             {
+                const auto& af = runtime_config()->general.m_autofire;
+                const auto now_ts = std::chrono::steady_clock::now();
+
+                // Respect per-shot delay + cooldown from autofire config (mirrors triggerbot timing).
+                if (now_ts < m_autofire_cooldown_until)
+                    goto autofire_skip_press; // defer this tick — let cooldown expire
+
                 // Autostop: stop moving when firing if enabled
-                if (runtime_config()->general.m_autofire.autostop)
+                if (af.autostop)
                 {
                     // Calculate required speed based on weapon max speed and autofire's required_shoot_speed percentage
                     const auto weapon_max_speed = ctx.fire_mode ? ctx.debug.max_speed.second : ctx.debug.max_speed.first;
@@ -575,8 +583,12 @@ void aimbot_t::tick()
                 // its attack-ownership gate open while autofire owns the trigger.
                 m_autofire_held = true;
 
+                // Enforce per-shot delay + post-shot cooldown (mirrors triggerbot timing).
+                const auto committed_delay = std::max(0, af.delay);
+                m_autofire_cooldown_until = now_ts + std::chrono::milliseconds(committed_delay + af.delay_after_ms);
+
                 // Notify auto_stop that the shot was delivered (like triggerbot does)
-                if (runtime_config()->general.m_autofire.autostop)
+                if (af.autostop)
                 {
                     features::misc::auto_stop().notify_shot(features::misc::auto_stop_source::advanced_trigger);
                 }
@@ -587,6 +599,7 @@ void aimbot_t::tick()
                 platform::windows::bound_input().pointer(0, 0, platform::windows::pointer_action::primary_up);
                 m_autofire_held = false;
             }
+autofire_skip_press:;
         }
     }
     else

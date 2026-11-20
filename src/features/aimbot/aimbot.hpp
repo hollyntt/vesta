@@ -346,6 +346,8 @@ private:
     // Standalone autofire owns the trigger between its own press/release points. The RCS gate in
     // recoil_control must recognize this or it clears corrections on every tick of an autofire burst.
     bool m_autofire_held{false};
+    // Per-shot autocool: prevents autofire from firing faster than delay+cooldown allows.
+    std::chrono::steady_clock::time_point m_autofire_cooldown_until{};
     std::atomic<std::int64_t> m_view_engaged_ticks{};
     std::atomic<std::uintptr_t> m_view_engaged_target{};
     void note_view_engaged(const std::uintptr_t target) noexcept

@@ -109,7 +109,7 @@ void draw_general_tab()
                {
                    toggle_row("Auto Accept Match", p.auto_accept);
                        auto& af = p.m_autofire;
-                        toggle_popup_row("Autofire", af.enabled, 10, [&] {
+                        toggle_popup_row("Autofire", af.enabled, 13, [&] {
                         ui::menu::combat::master_row(af.enabled, af.activation_mode);
                            if (af.activation_mode != config::combat_profile::activation::always)
                            keybind_row("Key", af.key);
@@ -119,6 +119,9 @@ void draw_general_tab()
                            slider_row("Min Damage", af.min_damage, 1.0f, 500.0f, " HP", 1.0f);
                            toggle_row("Autowall", af.autowall);
                            toggle_row("Auto Reload", af.auto_reload);
+                           slider_row("Hitchance", af.hitchance, 0.0f, 100.0f, "%", 1.0f);
+                           ui::menu::combat::multipoint_row(af.multipoint, af.multipoint_config);
+                           ui::menu::combat::rcs_row(af.rcs);
                            toggle_popup_row(
                                "Autostop", af.autostop, 3,
                                [&]

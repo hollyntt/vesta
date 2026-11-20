@@ -50,6 +50,7 @@ void menu_t::draw_triggerbot()
                                }
                                toggle_row("Predictive", global.triggerbot_predictive);
                                toggle_row("Lethal Only", global.triggerbot_lethal_only);
+                                   ui::menu::combat::rcs_row(global.triggerbot_rcs);
                            }
                        });
         if (global.triggerbot_enabled)
@@ -92,6 +93,7 @@ void menu_t::draw_triggerbot()
                                }
                                toggle_row("Predictive", group.triggerbot_predictive);
                                toggle_row("Lethal Only", group.triggerbot_lethal_only);
+                               ui::menu::combat::rcs_row(group.triggerbot_rcs);
                            });
             card_in_column("trigger_penetration", "PENETRATION", 2, 1,
                            [&]
