@@ -16,35 +16,11 @@ jobs:
           fetch-depth: 0
       - name: Generate version from commit count
         id: version
-        shell: pwsh
         run: |
-          # Get the latest existing version tag
-          $existingTags = git tag --sort=-version:refname | Where-Object { $_ -match '^[vV]?1\.' }
-          if ($existingTags.Count -gt 0) {
-            $latest = $existingTags[0]
-            Write-Host "Latest tag: $latest"
-            
-            # Extract version numbers
-            if ($latest -match '^v?(\d+)\.(\d+)\.(\d+)') {
-              $major = [int]$matches[1]
-              $minor = [int]$matches[2]
-              $patch = [int]$matches[3]
-              
-              # Increment patch for each new commit since last tag
-              $commitsSinceTag = git rev-list --count "$latest"..HEAD
-              $newPatch = $patch + $commitsSinceTag
-              
-              $newTag = "v${major}.${minor}.${newPatch}"
-              Write-Host "Generated tag: $newTag"
-            } else {
-              $newTag = "v1.2.$(git rev-list --count HEAD)"
-            }
-          } else {
-            $newTag = "v1.2.$(git rev-list --count HEAD)"
-          }
-          
-          echo "tag=$newTag" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
-          echo "Version: $newTag"
+          $commitsSinceLastTag = git rev-list --count "$(git describe --tags --abbrev=0 2>$null || echo 'HEAD~100')"..HEAD
+          $version = "v1.2.$($commitsSinceLastTag + 3)"
+          echo "tag=$version" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+          echo "Generated version: $version"
       - name: Configure
         run: cmake --preset release
       - name: Build
@@ -61,7 +37,6 @@ jobs:
     runs-on: windows-2022
     permissions:
       contents: write
-      artifact-metadata: write
     env:
       TAG: ${{ needs.build.outputs.version }}
     steps:
@@ -76,39 +51,23 @@ jobs:
           $tag = "$env:TAG"
           $asset = "build/bin/vesta.exe"
           $sha256 = (Get-FileHash $asset -Algorithm SHA256).Hash.ToLowerInvariant()
-          $repositoryUrl = "${{ github.server_url }}/${{ github.repository }}"
-          $runUrl = "$repositoryUrl/actions/runs/${{ github.run_id }}"
           
-          # Get commit info
-          $commitMsg = git log -1 --pretty=%B
-          $commitShort = git rev-parse --short HEAD
-          
-          $releaseNotes = @"
-## Auto-release $tag
+          # Check if release already exists
+          $existing = gh release view $tag 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag already exists, updating..."
+            gh release upload $tag $asset --clobber
+          } else {
+            Write-Host "Creating new release $tag..."
+            $notes = @"
+## Auto Release $tag
 
-Built from commit [$commitShort](https://github.com/${{ github.repository }}/commit/$env:GITHUB_SHA)
+Built automatically from commit [$env:GITHUB_SHA.Substring(0,7)]($env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/commit/$env:GITHUB_SHA)
 
-**Commit message:** $commitMsg
+**SHA-256:** \``$sha256\`\`
 
-**SHA-256:** \` `$sha256 \`
-
-**Build:** [$($env:GITHUB_SHA.Substring(0, 7))](https://github.com/${{ github.repository }}/commit/$env:GITHUB_SHA) · [GitHub Actions run]($runUrl)
+[GitHub Actions Run]($env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID)
 "@
-          $releaseNotes | Set-Content -Encoding utf8 RELEASE_NOTES.md
-          
-          # Delete existing tag/release if it exists (from previous failed run)
-          gh release delete $tag --yes 2>$null
-          git tag -d $tag 2>$null
-          
-          # Create tag and release
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag $tag HEAD
-          git push origin $tag
-          
-          gh release create $tag `
-            --title "Auto Release $tag" `
-            --notes-file RELEASE_NOTES.md `
-            $asset
-          
+            gh release create $tag --title "Auto Release $tag" --notes $notes $asset
+          }
           Write-Host "Released $tag successfully"
