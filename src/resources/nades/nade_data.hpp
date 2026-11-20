@@ -1151,6 +1151,10 @@ namespace resources::nades {
 		{ "Heaven", "Run+Jump+Throw", 1061.9623f, -807.0312f, -318.9688f, 4.0382f, -149.5730f, kind::he, action_run | action_jump | action_release_movement_after_throw | action_always_run, 49u, 1u, 1.0000f, false },
 	};
 
+	// de_cbble — placeholder; lineups will be populated once extracted from community sources.
+	// Dummy sentinel required by MSVC; real count is 0 so the loop never reaches it.
+	inline constexpr entry k_de_cbble[] { { nullptr, nullptr, 0.f, 0.f, 0.f, 0.f, 0.f, kind::smoke, action_none, 0u, 0u, 0.f, false } };
+
 	inline constexpr entry k_de_vertigo[]
 	{
 		{ "A Catwalk", "Throw", -1001.9642f, -929.8718f, 11648.0312f, -57.7033f, 20.3941f, kind::smoke, action_none, 0u, 0u, 1.0000f, false },
@@ -1240,6 +1244,7 @@ namespace resources::nades {
 		{ "de_overpass", k_de_overpass, 68u },
 		{ "de_train", k_de_train, 45u },
 		{ "de_vertigo", k_de_vertigo, 71u },
+		{ "de_cbble", k_de_cbble, 0u },
 	};
 
 } // namespace resources::nades

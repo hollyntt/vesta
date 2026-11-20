@@ -314,6 +314,7 @@ private:
     int m_bought_round{-1};
     clock::time_point m_spawned_at{};
     float m_spawn_time{};
+    bool m_went_to_freeze{false}; // track whether we entered a freeze period, to detect transition out of it
     clock::time_point m_next_reload_check{};
     clock::time_point m_reload_cooldown{};
 

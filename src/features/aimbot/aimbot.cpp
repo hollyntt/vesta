@@ -397,6 +397,19 @@ void aimbot_t::tick()
         simulation::ballistics().tick();
 
     recoil_control(requested_cfg.aimbot, aimbot_requested && ctx.valid);
+    // Autofire RCS: separate correction profile from the main aimbot so each weapon can have
+    // its own RCS tuning. Gate it through m_autofire_held so the burst-shots counter stays
+    // consistent with the trigger-ownership state already used by aimbot_recoil.
+    const auto& af_cfg = runtime_config()->general.m_autofire;
+    const bool autofire_active = af_cfg.enabled &&
+        config::combat_profile::activation_active(af_cfg.activation_mode, af_cfg.key);
+    if ((walk_autofire || autofire_active) && af_cfg.rcs.enabled)
+    {
+        config::combat_profile::aimbot rcs_holder{};
+        rcs_holder.rcs = af_cfg.rcs;
+        rcs_holder.checks = af_cfg.checks;
+        recoil_control(rcs_holder, false);
+    }
     if (!aimbot_requested && !trigger_requested && !m_trigger_held && !dynamic_fov_visualization_requested)
     {
         reset_aim_tracking();
@@ -500,6 +513,10 @@ void aimbot_t::tick()
                     tb_cfg.checks.walls = runtime_config()->general.m_autofire.autowall
                         ? config::combat_profile::wall_policy::penetration
                         : config::combat_profile::wall_policy::block;
+                    tb_cfg.hitchance = runtime_config()->general.m_autofire.hitchance;
+                    tb_cfg.multipoint = runtime_config()->general.m_autofire.multipoint;
+                    tb_cfg.multipoint_config = runtime_config()->general.m_autofire.multipoint_config;
+                    tb_cfg.rcs = runtime_config()->general.m_autofire.rcs;
 
                     // Use triggerbot's trace_direction to check if target is in crosshair
                     foundation::vec3 forward{};

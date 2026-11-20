@@ -319,6 +319,14 @@ void aimbot_t::triggerbot(const foundation::vec3& eye_pos, const foundation::vec
     m_revolver_pre_cock_down = false;
 
     features::misc::auto_stop().notify_shot(features::misc::auto_stop_source::advanced_trigger);
+    if (cfg.rcs.enabled)
+    {
+        config::combat_profile::aimbot rcs_holder{};
+        rcs_holder.rcs = cfg.rcs;
+        rcs_holder.checks = cfg.checks;
+        // defer_input=true: let the main tick's flush_recoil_input handle input delivery once per frame
+        recoil_control(rcs_holder, true);
+    }
     features::visuals::event_log().begin_trigger_shot(revolver ? "R8 Trigger" : "Trigger", false);
     m_trigger_held = true;
     m_seed_press_active = false;

@@ -8,6 +8,7 @@
 #include <game/input/action_state.hpp>
 #include <platform/windows/input.hpp>
 #include <features/misc/auto_peek.hpp>
+#include <features/aimbot/aimbot.hpp>
 
 #include <algorithm>
 
@@ -30,6 +31,17 @@ void auto_peek_t::tick()
         return;
     }
     const auto& cfg = snapshot->general.m_auto_peek;
+
+    // Autofire or triggerbot activation also counts as an activate reason;
+    // otherwise respect the per-config key + mode gate.
+    const bool external_fire = features::aimbot::g_walk_autofire.load(std::memory_order_acquire) ||
+                               (snapshot->general.m_autofire.enabled &&
+                                config::combat_profile::activation_active(
+                                    snapshot->general.m_autofire.activation_mode,
+                                    snapshot->general.m_autofire.key));
+    const bool self_activated =
+        config::combat_profile::activation_active(cfg.activation_mode, cfg.activation_key);
+    const bool activated = external_fire || self_activated;
 
     const auto pawn = game::local_player().pawn();
     if (!pawn || !game::local_player().alive() ||
@@ -96,7 +108,9 @@ void auto_peek_t::tick()
     const bool firing = platform::windows::bound_input().injected_primary_down() ||
                         game::physical_action_down(game::input_action::attack,
                                                    platform::windows::bound_input());
-    if (cfg.require_firing && !firing)
+    // When externally activated (autofire/triggerbot), bypass the physical-firing gate so the peek still engages
+    // even if no physical mouse button is held. Otherwise respect require_firing.
+    if (!activated && cfg.require_firing && !firing)
         return;
 
     const auto to_anchor = m_anchor - origin;

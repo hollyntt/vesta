@@ -228,6 +228,8 @@ struct general_profile
         float hold{70.0f};           // 0-100: how snappily the view is held on the anchor
         float record_speed{20.0f};   // 2D speed (u/s) below which the spot counts as "still" and (re)records
         float peek_distance{250.0f}; // how far ahead of the player the anchor point sits (u)
+            int activation_key{VK_XBUTTON2}; // Mouse side button by default
+            int activation_mode{config::combat_profile::activation::always};
     } m_auto_peek{};
 
         // Visual-only wall-distance and lateral-position overlay. This does not
@@ -356,6 +358,11 @@ struct general_profile
         config::combat_profile::legit_checks checks{
             .airborne = true, .flashed = true, .smoke = true, .flash_threshold = 85.0f,
             .walls = config::combat_profile::wall_policy::penetration};
+        float hitchance{75.0f};
+        bool multipoint{true};
+        config::combat_profile::multipoint_settings multipoint_config{};
+        bool rcs_enabled{false};
+        config::combat_profile::rcs_settings rcs{};
     } m_autofire{};
 
     // Interface language: 0 English, 1 Russian (render::localization::id).

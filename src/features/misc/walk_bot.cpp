@@ -152,8 +152,14 @@ void walk_bot_t::tick()
     // (warmup ending, a new round), which reuse the pawn and do not kill it.
     const bool teleported = m_previous_origin_valid && player.origin.distance(m_previous_origin) > 200.0f;
     const bool respawned = player.spawn_time != m_spawn_time;
+    // A new round starts when the freeze period was active and is now over (warmup ending or fresh round).
+    // Also reset if the match has ended so we do not carry stale route state into the next game.
+    const auto rules = read_game_rules();
+    const bool round_resync = !m_went_to_freeze && rules.freeze;
+    m_went_to_freeze = rules.freeze;
+    const bool match_done = rules.match_ended;
     m_spawn_time = player.spawn_time;
-    if (player.pawn != m_pawn || !m_was_alive || teleported || respawned)
+    if (player.pawn != m_pawn || !m_was_alive || teleported || respawned || round_resync || match_done)
     {
         if (player.pawn != m_pawn || !m_was_alive || respawned)
         {

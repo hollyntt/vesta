@@ -190,6 +190,10 @@ struct combat_profile
         bool revolver_pre_cock{};
         int revolver_release_margin_ms{16};
         legit_checks checks{};
+        bool multipoint{true};
+        multipoint_settings multipoint_config{};
+        bool rcs_enabled{false};
+        rcs_settings rcs{};
     };
 
     struct other
@@ -260,6 +264,8 @@ struct combat_profile
         bool triggerbot_revolver_pre_cock{};
         int triggerbot_revolver_release_margin_ms{16};
         legit_checks triggerbot_checks{};
+        bool triggerbot_rcs_enabled{false};
+        rcs_settings triggerbot_rcs{};
 
         bool penetration_crosshair{false};
         foundation::rgba penetration_color_yes{0, 255, 0, 255};
@@ -304,6 +310,8 @@ struct combat_profile
         bool triggerbot_revolver_pre_cock{};
         int triggerbot_revolver_release_margin_ms{16};
         legit_checks triggerbot_checks{};
+        bool triggerbot_rcs_enabled{false};
+        rcs_settings triggerbot_rcs{};
     };
 
     static constexpr std::uint32_t k_group_count{6};

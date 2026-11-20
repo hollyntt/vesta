@@ -117,6 +117,8 @@ static void to_json(json& j, const combat_profile::global_settings& g)
              {"triggerbot_revolver_pre_cock", g.triggerbot_revolver_pre_cock},
              {"triggerbot_revolver_release_margin_ms", g.triggerbot_revolver_release_margin_ms},
              {"triggerbot_checks", g.triggerbot_checks},
+             {"triggerbot_rcs_enabled", g.triggerbot_rcs.enabled},
+             {"triggerbot_rcs", g.triggerbot_rcs},
              {"penetration_crosshair", g.penetration_crosshair},
              {"penetration_color_yes", g.penetration_color_yes},
              {"penetration_color_no", g.penetration_color_no}};
@@ -276,7 +278,9 @@ static void to_json(json& j, const combat_profile::group_overrides& o)
              {"triggerbot_predictive", o.triggerbot_predictive},
              {"triggerbot_revolver_pre_cock", o.triggerbot_revolver_pre_cock},
              {"triggerbot_revolver_release_margin_ms", o.triggerbot_revolver_release_margin_ms},
-             {"triggerbot_checks", o.triggerbot_checks}};
+             {"triggerbot_checks", o.triggerbot_checks},
+             {"triggerbot_rcs_enabled", o.triggerbot_rcs.enabled},
+             {"triggerbot_rcs", o.triggerbot_rcs}};
 }
 
 static void from_json(const json& j, combat_profile::group_overrides& o)
@@ -356,6 +360,15 @@ static void from_json(const json& j, combat_profile::group_overrides& o)
     else
         o.triggerbot_checks.walls =
             o.triggerbot_autowall ? combat_profile::wall_policy::penetration : combat_profile::wall_policy::block;
+    read_field(j, "triggerbot_rcs_enabled", o.triggerbot_rcs.enabled);
+    read_field(j, "triggerbot_rcs", o.triggerbot_rcs);
+    o.triggerbot_rcs.start_bullet = std::clamp(o.triggerbot_rcs.start_bullet, 1, 10);
+    o.triggerbot_rcs.pitch = std::clamp(o.triggerbot_rcs.pitch, 0.0f, 200.0f);
+    o.triggerbot_rcs.yaw = std::clamp(o.triggerbot_rcs.yaw, 0.0f, 200.0f);
+    o.triggerbot_rcs.response_ms = std::clamp(o.triggerbot_rcs.response_ms, 1.0f, 150.0f);
+    o.triggerbot_rcs.smoothness = std::clamp(o.triggerbot_rcs.smoothness, 0.0f, 100.0f);
+    o.triggerbot_rcs.randomness = std::clamp(o.triggerbot_rcs.randomness, 0.0f, 30.0f);
+    o.triggerbot_rcs.drift = std::clamp(o.triggerbot_rcs.drift, 0.0f, 30.0f);
 }
 
 static void to_json(json& j, const visual_profile::player::box& b)
@@ -2097,7 +2110,9 @@ static void to_json(json& j, const general_profile::auto_peek& p)
              {"require_firing", p.require_firing},
              {"hold", p.hold},
              {"record_speed", p.record_speed},
-             {"peek_distance", p.peek_distance}};
+             {"peek_distance", p.peek_distance},
+             {"activation_key", p.activation_key},
+             {"activation_mode", p.activation_mode}};
 }
 
 static void from_json(const json& j, general_profile::auto_peek& p)
@@ -2107,6 +2122,8 @@ static void from_json(const json& j, general_profile::auto_peek& p)
     read_field(j, "hold", p.hold);
     read_field(j, "record_speed", p.record_speed);
     read_field(j, "peek_distance", p.peek_distance);
+    read_field(j, "activation_key", p.activation_key);
+    read_field(j, "activation_mode", p.activation_mode);
     p.hold = std::clamp(p.hold, 0.0f, 100.0f);
     p.record_speed = std::clamp(p.record_speed, 0.0f, 100.0f);
     p.peek_distance = std::clamp(p.peek_distance, 0.0f, 2000.0f);
@@ -2178,6 +2195,11 @@ static void to_json(json& j, const general_profile::autofire& af)
              {"delay_after_ms", af.delay_after_ms},
              {"no_spread", af.no_spread},
              {"checks_spread", af.checks_spread},
+             {"hitchance", af.hitchance},
+             {"multipoint", af.multipoint},
+             {"multipoint_config", af.multipoint_config},
+             {"rcs_enabled", af.rcs_enabled},
+             {"rcs", af.rcs},
              {"checks", {{"airborne", af.checks.airborne},
                          {"flashed", af.checks.flashed},
                          {"smoke", af.checks.smoke},
@@ -2205,6 +2227,11 @@ static void from_json(const json& j, general_profile::autofire& af)
     read_field(j, "delay_after_ms", af.delay_after_ms);
     read_field(j, "no_spread", af.no_spread);
     read_field(j, "checks_spread", af.checks_spread);
+    read_field(j, "hitchance", af.hitchance);
+    read_field(j, "multipoint", af.multipoint);
+    read_field(j, "multipoint_config", af.multipoint_config);
+    read_field(j, "rcs_enabled", af.rcs_enabled);
+    read_field(j, "rcs", af.rcs);
     if (j.contains("checks"))
     {
         const auto& c = j.at("checks");
@@ -2405,6 +2432,8 @@ combat_profile::resolved_config combat_profile::get(std::uint32_t weapon_type) c
     cfg.triggerbot.revolver_release_margin_ms =
         ov.use_global ? gl.triggerbot_revolver_release_margin_ms : ov.triggerbot_revolver_release_margin_ms;
     cfg.triggerbot.checks = ov.use_global ? gl.triggerbot_checks : ov.triggerbot_checks;
+    cfg.triggerbot.rcs.enabled = ov.use_global ? gl.triggerbot_rcs.enabled : ov.triggerbot_rcs.enabled;
+    cfg.triggerbot.rcs = ov.use_global ? gl.triggerbot_rcs : ov.triggerbot_rcs;
 
     cfg.other.penetration_crosshair = gl.penetration_crosshair;
     cfg.other.penetration_color_yes = gl.penetration_color_yes;
