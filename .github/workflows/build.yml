@@ -18,11 +18,9 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          # Use short SHA as version: #commit_hash
           $shortSha = $env:GITHUB_SHA.Substring(0, 7)
           $version = "#$shortSha"
           echo "tag=$version" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
-          echo "Generated version: $version"
       - name: Configure
         run: cmake --preset release
       - name: Build
@@ -54,7 +52,6 @@ jobs:
           $asset = "build/bin/vesta.exe"
           $sha256 = (Get-FileHash $asset -Algorithm SHA256).Hash.ToLowerInvariant()
           
-          # Check if release already exists
           $existing = gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
             Write-Host "Updating existing release $tag..."
@@ -64,10 +61,8 @@ jobs:
             $notes = @"
 ## Auto Release $tag
 
-**Commit:** [$env:GITHUB_SHA](https://github.com/${{ github.repository }}/commit/$env:GITHUB_SHA)
-**Message:** $(git log -1 --pretty=%B)
-
-**SHA-256:** \``$sha256\`\`
+**Commit:** $env:GITHUB_SHA
+**SHA-256:** $sha256
 
 [GitHub Actions Run]($env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID)
 "@
